@@ -29,7 +29,7 @@ TEXTid textID = FAILED_ID;
 // some globals
 int frame = 0;
 int oldX, oldY, oldXM, oldYM, oldXMM, oldYMM;
-int npcaHP = MAX_HP, npcbHP = MAX_HP;
+int actorHP = MAX_HP, npcaHP = MAX_HP, npcbHP = MAX_HP;
 
 // hotkey callbacks
 void QuitGame(BYTE, BOOL4);
@@ -256,7 +256,7 @@ void GameAI(int skip)
 	actor.Play(LOOP, (float) skip, FALSE, TRUE);
 
 	npca.ID(npcaID);
-	inpca.Play(LOOP, (float) skip, FALSE, TRUE);
+	npca.Play(LOOP, (float) skip, FALSE, TRUE);
 	
 	npcb.ID(npcbID);
 	npcb.Play(LOOP, (float) skip, FALSE, TRUE);
@@ -557,13 +557,14 @@ void RenderIt(int skip)
    text.Begin(vID);
    text.Write(string, 20, 20, 255, 0, 0);
 
-   char posS[256], fDirS[256], uDirS[256], dis[256], OposS[256], AposS[256], npcaHPS[256], npcbHPS[256];
+   char posS[256], fDirS[256], uDirS[256], dis[256], OposS[256], AposS[256], actorHPS[256], npcaHPS[256], npcbHPS[256];
    sprintf(posS, "pos: %8.3f %8.3f %8.3f", pos[0], pos[1], pos[2]);
    sprintf(fDirS, "facing: %8.3f %8.3f %8.3f", fDir[0], fDir[1], fDir[2]);
    sprintf(uDirS, "up: %8.3f %8.3f %8.3f", uDir[0], uDir[1], uDir[2]);
    sprintf(OposS, "opos: %8.3f %8.3f %8.3f", opos[0], opos[1], opos[2]);
    sprintf(AposS, "apos: %8.3f %8.3f %8.3f", apos[0], apos[1], apos[2]);
    sprintf(dis, "oadis: %8.3f", oadistance(opos,apos));
+   sprintf(actorHPS, "actorHP: %d/100", actorHP);
    sprintf(npcaHPS, "npcaHP: %d/100", npcaHP);
    sprintf(npcbHPS, "npcbHP: %d/100", npcbHP);
 
@@ -573,8 +574,9 @@ void RenderIt(int skip)
    text.Write(dis, 20, 95, 255, 255, 0);
    text.Write(OposS, 20, 110, 255, 255, 0);
    text.Write(AposS, 20, 125, 255, 255, 0);
-   text.Write(npcaHPS, 20, 140, 255, 255, 0);
-   text.Write(npcbHPS, 20, 140, 255, 255, 0);
+   text.Write(actorHPS, 20, 140, 255, 255, 0);
+   text.Write(npcaHPS, 20, 155, 255, 255, 0);
+   text.Write(npcbHPS, 20, 170, 255, 255, 0);
 
    text.End();
 
