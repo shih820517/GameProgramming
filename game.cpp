@@ -18,22 +18,118 @@
 
 #define MAX_HP 100
 
+class MyCharacter : public FnCharacter {
+public:
+	MyCharacter(int blood1=0){
+		blood=blood1;
+		fullBlood=blood1;
+		frame=0;
+		bloodBarID = FAILED_ID;
+	}
+	void setBB(FnScene scene){
+		OBJECTid bbID = scene.CreateObject(OBJECT);
+		FnObject bb(bbID);
+		bb.SetParent(GetBaseObject());
+		bb.Translate(0.0f, 0.0f, 95.0f, REPLACE);
+		float size[2], color[4];
+
+	    size[0] = 25.0f;
+		size[1] = 1.2f;
+		color[0] = color[3] = 1.0f; color[1] = color[2] = 0.0f;
+		bloodBarID = bb.Billboard(NULL, size, NULL, 0, color);
+	}
+	void setBBA(FnScene scene){
+		OBJECTid bbID = scene.CreateObject(OBJECT);
+		FnObject bb(bbID);
+		bb.SetParent(GetBaseObject());
+		bb.Translate(0.0f, 0.0f, 95.0f, REPLACE);
+		float size[2], color[4];
+
+	    size[0] = 25.0f;
+		size[1] = 1.2f;
+		color[0] = color[3] = 0.0f; color[1] =1.0f;
+		color[2] = 0.0f;
+		bloodBarID = bb.Billboard(NULL, size, NULL, 0, color);
+	}
+
+	void BB(){
+		FnBillboard bb(bloodBarID);
+		float newSize[2];
+		newSize[0]=25.0f*blood/fullBlood;
+		newSize[1]=1.2f;
+		bb.SetPositionSize(NULL, newSize);
+	}
+	void turnTo(MyCharacter actor) {
+		
+		float actPos[3], myPos[3], actfDir[3], actuDir[3], myfDir[3], myuDir[3];
+
+		actor.GetPosition(actPos);
+		actor.GetDirection(actfDir, actuDir);
+		GetPosition(myPos);
+		GetDirection(myfDir, myuDir);
+		
+		double dot = (myfDir[0]*(actPos[0]-myPos[0])+myfDir[1]*(actPos[1]-myPos[1]));
+		double cosTheta = dot/((sqrt(pow(myfDir[0], 2)+pow(myfDir[1], 2)))*(sqrt(pow(actPos[0]-myPos[0], 2)+pow(actPos[1]-myPos[1], 2))));
+		double theta1 = acos(cosTheta)/3.14*180;
+
+		double cross = myfDir[0]*(actPos[1]-myPos[1])-myfDir[1]*(actPos[0]-myPos[0]);
+		double sinTheta = cross/((sqrt(pow(myfDir[0], 2)+pow(myfDir[1], 2)))*(sqrt(pow(actPos[0]-myPos[0], 2)+pow(actPos[1]-myPos[1], 2))));
+		double theta2 = asin(sinTheta)/3.14*180;
+		double theta;
+		if(theta1*theta2>0) 
+			theta=-theta1;
+		else
+			theta=theta1;
+
+		if(theta > 2 || theta<-2) {
+			TurnRight(theta);
+		}
+	}
+	int blood, fullBlood;
+	int frame;
+	GEOMETRYid bloodBarID;
+};
+
+
 VIEWPORTid vID;                 // the major viewport
 SCENEid sID;                    // the 3D scene
 OBJECTid cID, tID, oID;         // the main camera and the terrain for terrain following
 CHARACTERid actorID, npcaID, npcbID; // the major character
-ACTIONid idleID, runID, curPoseID, idleaID, runaID, curPoseaID, idlebID, runbID, curPosebID, attackID; // two actions
+ACTIONid idleID, runID, dieID, combatIdleID, curPoseID; // actor actions
+ACTIONid normalAttack1ID, normalAttack2ID, normalAttack3ID, normalAttack4ID; // actor normal attacks
+ACTIONid npcaIdleID, npcaRunID; // npca actions
+ACTIONid npcbCombatIdleID, npcbRunID; // npcb actions
 ROOMid terrainRoomID = FAILED_ID;
 TEXTid textID = FAILED_ID;
+
+GEOMETRYid bloodBarID = FAILED_ID;//actorè¡€æ¢?
+GEOMETRYid bloodBarNPC1ID = FAILED_ID;//NPC1è¡€æ¢?
+GEOMETRYid bloodBarNPC2ID = FAILED_ID;//NPC2è¡€æ¢?
 
 // some globals
 int frame = 0;
 int oldX, oldY, oldXM, oldYM, oldXMM, oldYMM;
 int actorHP = MAX_HP, npcaHP = MAX_HP, npcbHP = MAX_HP;
+int actorState = 0;
+/*
+0 idle
+1 run
+2 combatIdle
+3 normalAttack1
+4 normalAttack2
+5 normalAttack3
+6 normalAttack4
+*/
+int actionFrame = 0;
+int npcaState;
+int npcbState;
+int combatWait;
+
 
 // hotkey callbacks
 void QuitGame(BYTE, BOOL4);
 void Movement(BYTE, BOOL4);
+void Attack(BYTE, BOOL4);
 
 // timer callbacks
 void GameAI(int);
@@ -48,6 +144,11 @@ void InitZoom(int, int);
 void ZoomCam(int, int);
 
 inline float oadistance(float *a, float *b);
+
+
+MyCharacter npca(100);
+MyCharacter npcb(80);
+MyCharacter actor(300);
 
 /*------------------
   the main program
@@ -91,20 +192,22 @@ void FyMain(int argc, char **argv)
    room.ID(terrainRoomID);
    room.AddObject(tID);
 
-   // load the character
+   // load the characters
    FySetModelPath("Data\\NTU5\\Characters");
    FySetTexturePath("Data\\NTU5\\Characters");
    FySetCharacterPath("Data\\NTU5\\Characters");
    actorID = scene.LoadCharacter("Lyubu2");
    npcaID = scene.LoadCharacter("Donzo2");
    npcbID = scene.LoadCharacter("Robber02");
-   room.AddObject(actorID);
-   room.AddObject(npcaID);
-   room.AddObject(npcbID);
+
+   // put characters in the room 
+   //room.AddObject(actorID);
+   //room.AddObject(npcaID);
+   //room.AddObject(npcbID);
 
    // put the character on terrain
    float pos[3], fDir[3], uDir[3];
-   FnCharacter actor, npca, npcb;
+   //FnCharacter actor, npca, npcb;
    actor.ID(actorID);
    pos[0] = 3569.0f; pos[1] = -3208.0f; pos[2] = 1000.0f;
    fDir[0] = 1.0f; fDir[1] = 0.0f; fDir[2] = 0.0f;
@@ -114,17 +217,21 @@ void FyMain(int argc, char **argv)
    actor.SetTerrainRoom(terrainRoomID, 10.0f);
    beOK = actor.PutOnTerrain(pos);
 
-   // Get two character actions pre-defined at Lyubu2
+   // Get actor actions at Lyubu2
    idleID = actor.GetBodyAction(NULL, "Idle");
    runID = actor.GetBodyAction(NULL, "Run");
-   attackID = actor.GetBodyAction(NULL, "NormalAttack1");
+   combatIdleID = actor.GetBodyAction(NULL, "CombatIdle");
+   normalAttack1ID = actor.GetBodyAction(NULL, "NormalAttack1");
+   normalAttack2ID = actor.GetBodyAction(NULL, "NormalAttack2");
+   normalAttack3ID = actor.GetBodyAction(NULL, "NormalAttack3");
+   normalAttack4ID = actor.GetBodyAction(NULL, "NormalAttack4");
 
-   // set the character to idle action
+   // set the actor to idle action
    curPoseID = idleID;
    actor.SetCurrentAction(NULL, 0, curPoseID);
    actor.Play(START, 0.0f, FALSE, TRUE);
 
-   //npca
+   // npca
    npca.ID(npcaID);
    pos[0] = 3769.0f; pos[1] = -3208.0f; pos[2] = 1000.0f;
    fDir[0] = 1.0f; fDir[1] = 0.0f; fDir[2] = 0.0f;
@@ -134,16 +241,16 @@ void FyMain(int argc, char **argv)
    npca.SetTerrainRoom(terrainRoomID, 10.0f);
    beOK = npca.PutOnTerrain(pos);
 
-   // Get two character actions pre-defined at Donzo2
-   idleaID = npca.GetBodyAction(NULL, "Idle");
-   runaID = npca.GetBodyAction(NULL, "Run");
+   // Get npca actions Donzo2
+   npcaIdleID = npca.GetBodyAction(NULL, "Idle");
+   npcaRunID = npca.GetBodyAction(NULL, "Run");
 
    // set the character to idle action
-   curPoseaID = idleaID;
-   npca.SetCurrentAction(NULL, 0, curPoseaID);
+   curPoseID = npcaIdleID;
+   npca.SetCurrentAction(NULL, 0, curPoseID);
    npca.Play(START, 0.0f, FALSE, TRUE);
 
-    //npcb
+   // npcb
    npcb.ID(npcbID);
    pos[0] = 3669.0f; pos[1] = -3208.0f; pos[2] = 1000.0f;
    fDir[0] = 1.0f; fDir[1] = 0.0f; fDir[2] = 0.0f;
@@ -153,13 +260,13 @@ void FyMain(int argc, char **argv)
    npcb.SetTerrainRoom(terrainRoomID, 10.0f);
    beOK = npcb.PutOnTerrain(pos);
 
-   // Get two character actions pre-defined at Robber02
-   idlebID = npcb.GetBodyAction(NULL, "CombatIdle");
-   runbID = npcb.GetBodyAction(NULL, "Run");
+   // Get npcb actions Robber02
+   npcbCombatIdleID = npcb.GetBodyAction(NULL, "CombatIdle");
+   npcbRunID = npcb.GetBodyAction(NULL, "Run");
 
    // set the character to idle action
-   curPosebID = idlebID;
-   npcb.SetCurrentAction(NULL, 0, curPosebID);
+   curPoseID = npcbCombatIdleID;
+   npcb.SetCurrentAction(NULL, 0, curPoseID);
    npcb.Play(START, 0.0f, FALSE, TRUE);
 
    // create object
@@ -196,6 +303,15 @@ void FyMain(int argc, char **argv)
    lgt.SetColor(1.0f, 1.0f, 1.0f);
    lgt.SetIntensity(1.0f);
 
+   // create a billboard and set parent to base object of the character to demo the simple bloodbar
+   actor.setBBA(scene);
+   //NPC1
+   
+   npca.setBB(scene);
+   //NPC2
+   npcb.setBB(scene);
+
+
    // create a text object for displaying messages on screen
    textID = FyCreateText("Trebuchet MS", 18, FALSE, FALSE);
 
@@ -205,7 +321,7 @@ void FyMain(int argc, char **argv)
    FyDefineHotKey(FY_RIGHT, Movement, FALSE);   // Right for turning right
    FyDefineHotKey(FY_LEFT, Movement, FALSE);    // Left for turning left
    FyDefineHotKey(FY_DOWN, Movement, FALSE);    // Down for moving back
-   FyDefineHotKey(FY_Z, Movement, FALSE);
+   FyDefineHotKey(FY_Z, Attack, FALSE);
 
    // define some mouse functions
    FyBindMouseFunction(LEFT_MOUSE, InitPivot, PivotCam, NULL, NULL);
@@ -230,6 +346,19 @@ inline float cameraHieght(float d_oa)
 	return sqrt(251600.0f - d_oa * d_oa) + 60.0f;
 }
 
+inline float hitcheck(float *a, float *b,float afDir[3])
+{   
+	int hit=0;
+	float r1=sqrt((a[0]-b[0])*(a[0]-b[0])+(a[1]-b[1])*(a[1]-b[1]));
+	float cos1 = ((a[0]-b[0])*afDir[0] + (a[1]-b[1])*afDir[1])/(r1*sqrt(afDir[0]*afDir[0]+afDir[1]*afDir[1]));
+		if((cos1 > (1/sqrt(2.0)))&&(40.f<r1< 100.f)){
+				hit = 1;
+		}
+		else if(r1< 40.f){
+				hit = 2;
+		}
+	return hit;
+}
 
 /*-------------------------------------------------------------
   30fps timer callback in fixed frame rate for major game loop
@@ -237,24 +366,23 @@ inline float cameraHieght(float d_oa)
  --------------------------------------------------------------*/
 void GameAI(int skip)
 {
-	FnCharacter actor, npca, npcb;
+	//FnCharacter actor, npca, npcb;
 	FnCamera camera;
 	FnObject object, terrain;
 
 	bool walk = false;
 	 
-	float afDir[3], auDir[3], cfDir[3], cuDir[3], ofDir[3], ouDir[3], obpos[3], acpos[3], ohitdir[3];
+	float afDir[3], auDir[3], cfDir[3], cuDir[3], ofDir[3], ouDir[3], obpos[3], acpos[3], napos[3], nbpos[3], ohitdir[3];
 
     ohitdir[0] = 0.0f; ohitdir[1] = 0.0f; ohitdir[2] = -1.0f;
 
 	object.ID(oID);
 	camera.ID(cID);
 	terrain.ID(tID);
-	
-	// play character pose
-	actor.ID(actorID);
-	actor.Play(LOOP, (float) skip, FALSE, TRUE);
 
+	actor.ID(actorID);
+
+	// play character pose
 	npca.ID(npcaID);
 	npca.Play(LOOP, (float) skip, FALSE, TRUE);
 	
@@ -263,6 +391,8 @@ void GameAI(int skip)
 
 	object.GetPosition(obpos);
 	actor.GetPosition(acpos);
+	npca.GetPosition(napos);
+	npcb.GetPosition(nbpos);
 
 	float d_oa = oadistance(obpos, acpos);
 
@@ -271,190 +401,297 @@ void GameAI(int skip)
 	actor.GetDirection(afDir, auDir);
 	object.GetDirection(ofDir, ouDir);
 
-	if (FyCheckHotKeyStatus(FY_UP))
+	npca.BB();
+	npcb.BB();
+	actor.BB();
+
+		if (FyCheckHotKeyStatus(FY_Y))
 	{
-		if (FyCheckHotKeyStatus(FY_RIGHT))
-		{
-			/* UP and RIGHT */
-			afDir[0] = ofDir[0] + ofDir[1];
-			afDir[1] = ofDir[1] - ofDir[0];
-			actor.SetDirection(afDir, auDir);
-			if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
-			{
-				object.MoveRight(10.0f/sqrt(2.0f));
-				object.MoveForward(10.0f/sqrt(2.0f));
-				walk = true;
-			}
+		actor.SetCurrentAction(NULL, 0, normalAttack1ID);
+		actor.Play(ONCE, (float) skip, FALSE, TRUE);
+		if(hitcheck(napos, acpos,afDir)){
+			//actorHP=actorHP-1;
+			npca.blood-=1;
 		}
-		else if (FyCheckHotKeyStatus(FY_LEFT))
-		{
-			/* UP and LEFT */
-			afDir[0] = ofDir[0] - ofDir[1];
-			afDir[1] = ofDir[1] + ofDir[0];
-			actor.SetDirection(afDir, auDir);
-			if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
-			{
-				object.MoveRight(-10.0f/sqrt(2.0f));
-				object.MoveForward(10.0f/sqrt(2.0f));
-				walk = true;
-			}
-		}
-		else 
-		{
-			/* UP only */
-			afDir[0] = ofDir[0];
-			afDir[1] = ofDir[1];
-			actor.SetDirection(afDir, auDir);
-			if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
-			{
-				object.MoveForward(10.0f);
-				walk = true;
-			}
+		if(hitcheck(nbpos, acpos,afDir)){
+			//actorHP=actorHP-1;
+			npcb.blood-=1;
 		}
 	}
-	else if (FyCheckHotKeyStatus(FY_DOWN))
-	{
-		if (FyCheckHotKeyStatus(FY_RIGHT))
+
+	if (FyCheckHotKeyStatus(FY_L))
 		{
-			/* DOWN and RIGHT */
-			afDir[0] = -ofDir[0] + ofDir[1];
-			afDir[1] = -ofDir[1] - ofDir[0];
-			actor.SetDirection(afDir, auDir);
-			if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
-			{
-				object.MoveRight(10.0f/sqrt(2.0f));
-				object.MoveForward(-10.0f/sqrt(2.0f));
-				walk = true;
-			}
-		}
-		else if (FyCheckHotKeyStatus(FY_LEFT))
-		{
-			/* DOWN and LEFT */
-			afDir[0] = -ofDir[0] - ofDir[1];
-			afDir[1] = -ofDir[1] + ofDir[0];
-			actor.SetDirection(afDir, auDir);
-			if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
-			{
-				object.MoveRight(-10.0f/sqrt(2.0f));
-				object.MoveForward(-10.0f/sqrt(2.0f));
-				walk = true;
-			}
-		}
-		else 
-		{
-			/* DOWN only */
-			afDir[0] = -ofDir[0];
-			afDir[1] = -ofDir[1];
-			actor.SetDirection(afDir, auDir);
-			if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
-			{
-				object.MoveForward(-10.0f);
-				walk = true;
-			}
-		}
-	}
-	else if (FyCheckHotKeyStatus(FY_RIGHT))
-	{
-		if (FyCheckHotKeyStatus(FY_UP))
-		{
-			/* RIGHT and UP */
-			afDir[0] = ofDir[1] + ofDir[0];
-			afDir[1] = -ofDir[0] + ofDir[1];
-			actor.SetDirection(afDir, auDir);
-			if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
-			{
-				object.MoveRight(10.0f/sqrt(2.0f));
-				object.MoveForward(10.0f/sqrt(2.0f));
-				walk = true;
-			}
-		}
-		else if (FyCheckHotKeyStatus(FY_DOWN))
-		{
-			/* RIGHT and DOWN */
-			afDir[0] = ofDir[1] - ofDir[0];
-			afDir[1] = -ofDir[0] - ofDir[1];
-			actor.SetDirection(afDir, auDir);
-			if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
-			{
-				object.MoveRight(10.0f/sqrt(2.0f));
-				object.MoveForward(-10.0f/sqrt(2.0f));
-				walk = true;
-			}
-		}
-		else 
-		{
-			/* RIGHT only */
 			afDir[0] = ofDir[1];
 			afDir[1] = -ofDir[0];
 			actor.SetDirection(afDir, auDir);
 			actor.TurnRight(TURN_A/2.0f);
 
-			if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
-			{
-				actor.TurnRight(TURN_A/2.0f);
-				object.TurnRight(TURN_A);
-			}
-			else
-			{
-				actor.TurnRight(TURN_A/2.0f);
-				object.TurnRight(TURN_A/2.0f);
-				object.MoveRight(-10.f);
-				object.TurnRight(TURN_A/2.0f);
-				walk = true;
-			}
+			
+			actor.TurnRight(TURN_A/2.0f);
+			object.TurnRight(TURN_A/2.0f);
+			object.MoveRight(-10.f);
+			object.TurnRight(TURN_A/2.0f);
+			walk = true;
 		}
-	}
-	else if (FyCheckHotKeyStatus(FY_LEFT))
-	{
-		if (FyCheckHotKeyStatus(FY_UP))
-		{
-			/* LEFT and UP */
-			afDir[0] = -ofDir[1] + ofDir[0];
-			afDir[1] = ofDir[0] + ofDir[1];
-			actor.SetDirection(afDir, auDir);
-			if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
-			{
-				object.MoveRight(-10.0f/sqrt(2.0f));
-				object.MoveForward(10.0f/sqrt(2.0f));
-				walk = true;
-			}
-		}
-		else if (FyCheckHotKeyStatus(FY_DOWN))
-		{
-			/* LEFT and DOWN */
-			afDir[0] = -ofDir[1] - ofDir[0];
-			afDir[1] = ofDir[0] - ofDir[1];
-			actor.SetDirection(afDir, auDir);
-			if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
-			{
-				object.MoveRight(-10.0f/sqrt(2.0f));
-				object.MoveForward(-10.0f/sqrt(2.0f));
-				walk = true;
-			}
-		}
-		else 
-		{
-			/* LEFT only */
-			afDir[0] = -ofDir[1];
-			afDir[1] = ofDir[0];
-			actor.SetDirection(afDir, auDir);	
-			actor.TurnRight(-TURN_A/2.0f);
-			if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
-			{
-				actor.TurnRight(-TURN_A/2.0f);
-				object.TurnRight(-TURN_A);
-			}
-			else
-			{
-				actor.TurnRight(-TURN_A/2.0f);
-				object.TurnRight(-TURN_A/2.0f);
-				object.MoveRight(10.f);
-				object.TurnRight(-TURN_A/2.0f);
-				walk = true;
-			}
-		}
-	}
 
+		if (FyCheckHotKeyStatus(FY_K))
+		{
+			afDir[0] = ofDir[1];
+			afDir[1] = -ofDir[0];
+			actor.SetDirection(afDir, auDir);
+			actor.TurnRight(-TURN_A/2.0f);
+
+			
+			actor.TurnRight(-TURN_A/2.0f);
+			object.TurnRight(-TURN_A/2.0f);
+			object.MoveRight(10.f);
+			object.TurnRight(-TURN_A/2.0f);
+			walk = true;
+		}
+
+	switch(actorState){
+		case 0:			
+			actor.Play(LOOP, (float) skip, FALSE, TRUE);
+			break;
+		case 1:
+			actor.Play(LOOP, (float) skip, FALSE, TRUE);
+			if (combatWait > 0)
+			{
+				combatWait--;
+			}
+
+			if (FyCheckHotKeyStatus(FY_UP))
+			{
+				if (FyCheckHotKeyStatus(FY_RIGHT))
+				{
+					/* UP and RIGHT */
+					afDir[0] = ofDir[0] + ofDir[1];
+					afDir[1] = ofDir[1] - ofDir[0];
+					actor.SetDirection(afDir, auDir);
+					if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
+					{
+						object.MoveRight(10.0f/sqrt(2.0f));
+						object.MoveForward(10.0f/sqrt(2.0f));
+						walk = true;
+					}
+				}
+				else if (FyCheckHotKeyStatus(FY_LEFT))
+				{
+					/* UP and LEFT */
+					afDir[0] = ofDir[0] - ofDir[1];
+					afDir[1] = ofDir[1] + ofDir[0];
+					actor.SetDirection(afDir, auDir);
+					if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
+					{
+						object.MoveRight(-10.0f/sqrt(2.0f));
+						object.MoveForward(10.0f/sqrt(2.0f));
+						walk = true;
+					}
+				}
+				else 
+				{
+					/* UP only */
+					afDir[0] = ofDir[0];
+					afDir[1] = ofDir[1];
+					actor.SetDirection(afDir, auDir);
+					if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
+					{
+						object.MoveForward(10.0f);
+						walk = true;
+					}
+				}
+			}
+			else if (FyCheckHotKeyStatus(FY_DOWN))
+			{
+				if (FyCheckHotKeyStatus(FY_RIGHT))
+				{
+					/* DOWN and RIGHT */
+					afDir[0] = -ofDir[0] + ofDir[1];
+					afDir[1] = -ofDir[1] - ofDir[0];
+					actor.SetDirection(afDir, auDir);
+					if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
+					{
+						object.MoveRight(10.0f/sqrt(2.0f));
+						object.MoveForward(-10.0f/sqrt(2.0f));
+						walk = true;
+					}
+				}
+				else if (FyCheckHotKeyStatus(FY_LEFT))
+				{
+					/* DOWN and LEFT */
+					afDir[0] = -ofDir[0] - ofDir[1];
+					afDir[1] = -ofDir[1] + ofDir[0];
+					actor.SetDirection(afDir, auDir);
+					if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
+					{
+						object.MoveRight(-10.0f/sqrt(2.0f));
+						object.MoveForward(-10.0f/sqrt(2.0f));
+						walk = true;
+					}
+				}
+				else 
+				{
+					/* DOWN only */
+					afDir[0] = -ofDir[0];
+					afDir[1] = -ofDir[1];
+					actor.SetDirection(afDir, auDir);
+					if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
+					{
+						object.MoveForward(-10.0f);
+						walk = true;
+					}
+				}
+			}
+			else if (FyCheckHotKeyStatus(FY_RIGHT))
+			{
+				if (FyCheckHotKeyStatus(FY_UP))
+				{
+					/* RIGHT and UP */
+					afDir[0] = ofDir[1] + ofDir[0];
+					afDir[1] = -ofDir[0] + ofDir[1];
+					actor.SetDirection(afDir, auDir);
+					if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
+					{
+						object.MoveRight(10.0f/sqrt(2.0f));
+						object.MoveForward(10.0f/sqrt(2.0f));
+						walk = true;
+					}
+				}
+				else if (FyCheckHotKeyStatus(FY_DOWN))
+				{
+					/* RIGHT and DOWN */
+					afDir[0] = ofDir[1] - ofDir[0];
+					afDir[1] = -ofDir[0] - ofDir[1];
+					actor.SetDirection(afDir, auDir);
+					if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
+					{
+						object.MoveRight(10.0f/sqrt(2.0f));
+						object.MoveForward(-10.0f/sqrt(2.0f));
+						walk = true;
+					}
+				}
+				else 
+				{
+					/* RIGHT only */
+					afDir[0] = ofDir[1];
+					afDir[1] = -ofDir[0];
+					actor.SetDirection(afDir, auDir);
+					actor.TurnRight(TURN_A/2.0f);
+
+					if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
+					{
+						actor.TurnRight(TURN_A/2.0f);
+						object.TurnRight(TURN_A);
+					}
+					else
+					{
+						actor.TurnRight(TURN_A/2.0f);
+						object.TurnRight(TURN_A/2.0f);
+						object.MoveRight(-10.f);
+						object.TurnRight(TURN_A/2.0f);
+						walk = true;
+					}
+				}
+			}
+			else if (FyCheckHotKeyStatus(FY_LEFT))
+			{
+				if (FyCheckHotKeyStatus(FY_UP))
+				{
+					/* LEFT and UP */
+					afDir[0] = -ofDir[1] + ofDir[0];
+					afDir[1] = ofDir[0] + ofDir[1];
+					actor.SetDirection(afDir, auDir);
+					if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
+					{
+						object.MoveRight(-10.0f/sqrt(2.0f));
+						object.MoveForward(10.0f/sqrt(2.0f));
+						walk = true;
+					}
+				}
+				else if (FyCheckHotKeyStatus(FY_DOWN))
+				{
+					/* LEFT and DOWN */
+					afDir[0] = -ofDir[1] - ofDir[0];
+					afDir[1] = ofDir[0] - ofDir[1];
+					actor.SetDirection(afDir, auDir);
+					if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
+					{
+						object.MoveRight(-10.0f/sqrt(2.0f));
+						object.MoveForward(-10.0f/sqrt(2.0f));
+						walk = true;
+					}
+				}
+				else 
+				{
+					/* LEFT only */
+					afDir[0] = -ofDir[1];
+					afDir[1] = ofDir[0];
+					actor.SetDirection(afDir, auDir);	
+					actor.TurnRight(-TURN_A/2.0f);
+					if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
+					{
+						actor.TurnRight(-TURN_A/2.0f);
+						object.TurnRight(-TURN_A);
+					}
+					else
+					{
+						actor.TurnRight(-TURN_A/2.0f);
+						object.TurnRight(-TURN_A/2.0f);
+						object.MoveRight(10.f);
+						object.TurnRight(-TURN_A/2.0f);
+						walk = true;
+					}
+				}
+			}
+
+			break;
+		case 2:
+			actor.Play(LOOP, (float) skip, FALSE, TRUE);
+			if (combatWait > 0)
+			{
+				combatWait--;
+			}
+			if (combatWait == 0)
+			{
+				actorState = 0;
+				actor.SetCurrentAction(NULL, 0, idleID);
+			}
+			if (FyCheckHotKeyStatus(FY_UP) || FyCheckHotKeyStatus(FY_RIGHT) || FyCheckHotKeyStatus(FY_LEFT) || FyCheckHotKeyStatus(FY_DOWN))
+			{
+				actorState = 1;
+				actor.SetCurrentAction(NULL, 0, runID);
+			}
+			break;
+		case 3:			
+			actor.Play(ONCE, (float) skip, FALSE, TRUE);
+			actionFrame++;
+
+
+			if (actionFrame == 10){
+				if(hitcheck(napos, acpos,afDir)){
+					//actorHP=actorHP-1;
+					npca.blood-=5;
+				}
+				if(hitcheck(nbpos, acpos,afDir)){
+					//actorHP=actorHP-1;
+					npcb.blood-=5;
+				}
+			}
+			if (actionFrame == 24)
+			{
+				actorState = 2;
+				actionFrame = 0;
+				combatWait = 150;
+				actor.SetCurrentAction(NULL, 0, combatIdleID);
+			}
+			break;
+		default:
+			break;
+	}
+	
+	
+
+	
 	object.GetPosition(obpos);
 	actor.GetPosition(acpos);
 	camera.GetDirection(cfDir, cuDir);
@@ -524,7 +761,7 @@ void RenderIt(int skip)
    FnObject object;
    object.ID(oID);
 
-   FnCharacter actor;
+   //FnCharacter actor;
    actor.ID(actorID);
 
 	float pos[3], fDir[3], uDir[3], opos[3],apos[3];
@@ -591,14 +828,33 @@ void RenderIt(int skip)
  -------------------*/
 void Movement(BYTE code, BOOL4 value)
 {
-	FnCharacter actor;
+	//FnCharacter actor;
 	actor.ID(actorID);
 
-	if( FyCheckHotKeyStatus(code) ) {
-		actor.SetCurrentAction(NULL, 0, runID);
+	if(value) {
+		if (actorState == 0 || actorState == 2)
+		{
+			actorState = 1;
+			actor.SetCurrentAction(NULL, 0, runID);
+		}
 	}
 	else if(!FyCheckHotKeyStatus(FY_UP) && !FyCheckHotKeyStatus(FY_RIGHT) && !FyCheckHotKeyStatus(FY_LEFT) && !FyCheckHotKeyStatus(FY_DOWN)) {
-		actor.SetCurrentAction(NULL, 0, idleID);
+		if (actorState == 1)
+		{
+			actorState = 0;
+			actor.SetCurrentAction(NULL, 0, idleID);
+		}
+	}
+}
+
+void Attack(BYTE code, BOOL4 value)
+{
+	//FnCharacter actor;
+	actor.ID(actorID);
+
+	if(value){
+		actorState = 3;
+		actor.SetCurrentAction(NULL, 0, normalAttack1ID);
 	}
 }
 
