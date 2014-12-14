@@ -95,10 +95,18 @@ VIEWPORTid vID;                 // the major viewport
 SCENEid sID;                    // the 3D scene
 OBJECTid cID, tID, oID;         // the main camera and the terrain for terrain following
 CHARACTERid actorID, npcaID, npcbID; // the major character
-ACTIONid idleID, runID, dieID, combatIdleID, curPoseID; // actor actions
+
+ACTIONid idleID, runID, dieID, combatIdleID, guardID, curPoseID; // actor actions
 ACTIONid normalAttack1ID, normalAttack2ID, normalAttack3ID, normalAttack4ID; // actor normal attacks
-ACTIONid npcaIdleID, npcaRunID; // npca actions
-ACTIONid npcbCombatIdleID, npcbRunID; // npcb actions
+ACTIONid heavyAttack1ID, heavyAttack2ID, heavyAttack3ID, ultimateAttackID; // actor heavy & ultimate attacks
+ACTIONid heavyDamagedID, leftDamagedID, rightDamagedID;
+
+ACTIONid npcaIdleID, npcaRunID, npcaDieID, npcaDefenceID; // npca actions
+ACTIONid npcaAttackL1ID, npcaAttackL2ID, npcaAttackHID, npcaHeavyAttackID;
+ACTIONid npcaDamageLID, npcaDamageHID;
+
+ACTIONid npcbCombatIdleID, npcbRunID, npcbDieID; // npcb actions
+
 ROOMid terrainRoomID = FAILED_ID;
 TEXTid textID = FAILED_ID;
 
@@ -110,6 +118,9 @@ GEOMETRYid bloodBarNPC2ID = FAILED_ID;//NPC2è¡€æ¢?
 int frame = 0;
 int oldX, oldY, oldXM, oldYM, oldXMM, oldYMM;
 int actorHP = MAX_HP, npcaHP = MAX_HP, npcbHP = MAX_HP;
+bool attackKeyLocked = false;
+bool movementKeyLocked = false;
+bool normalCombo = false;
 int actorState = 0;
 /*
 0 idle
@@ -119,10 +130,37 @@ int actorState = 0;
 4 normalAttack2
 5 normalAttack3
 6 normalAttack4
+7 heavyAttack1
+8 heavyAttack2
+9 heavyAttack3
+10 ultimateAttack
+11 guard
+12 heavyDamaged
+11 rightDamaged
+14 leftDamaged
+15 die
 */
 int actionFrame = 0;
-int npcaState;
-int npcbState;
+int npcaState = 0;
+/*
+0 idle
+1 run
+2 attackL1
+3 attackL2
+4 attackH
+5 heavyAttack
+6 defence
+7 damageL
+8 damageH
+9 die
+*/
+int npcaFrame = 0;
+int npcbState = 0;
+/*
+0 combatIdle
+1 run
+*/
+int npcbFrame = 0;
 int combatWait;
 
 
@@ -146,7 +184,7 @@ void ZoomCam(int, int);
 inline float oadistance(float *a, float *b);
 
 
-MyCharacter npca(100);
+MyCharacter npca(300);
 MyCharacter npcb(80);
 MyCharacter actor(300);
 
@@ -225,6 +263,15 @@ void FyMain(int argc, char **argv)
    normalAttack2ID = actor.GetBodyAction(NULL, "NormalAttack2");
    normalAttack3ID = actor.GetBodyAction(NULL, "NormalAttack3");
    normalAttack4ID = actor.GetBodyAction(NULL, "NormalAttack4");
+   heavyAttack1ID = actor.GetBodyAction(NULL, "HeavyAttack1");
+   heavyAttack2ID = actor.GetBodyAction(NULL, "HeavyAttack2");
+   heavyAttack3ID = actor.GetBodyAction(NULL, "HeavyAttack3");
+   ultimateAttackID = actor.GetBodyAction(NULL, "UltimateAttack");
+   guardID = actor.GetBodyAction(NULL, "Guard");
+   heavyDamagedID = actor.GetBodyAction(NULL, "HeavyDamaged");
+   rightDamagedID = actor.GetBodyAction(NULL, "RightDamaged");
+   leftDamagedID = actor.GetBodyAction(NULL, "LeftDamaged");
+   dieID = actor.GetBodyAction(NULL, "Die");
 
    // set the actor to idle action
    curPoseID = idleID;
@@ -244,6 +291,14 @@ void FyMain(int argc, char **argv)
    // Get npca actions Donzo2
    npcaIdleID = npca.GetBodyAction(NULL, "Idle");
    npcaRunID = npca.GetBodyAction(NULL, "Run");
+   npcaAttackL1ID = npca.GetBodyAction(NULL, "AttackL1");
+   npcaAttackL2ID = npca.GetBodyAction(NULL, "AttackL2");
+   npcaAttackHID = npca.GetBodyAction(NULL, "AttackH");
+   npcaHeavyAttackID = npca.GetBodyAction(NULL, "HeavyAttack");
+   npcaDefenceID = npca.GetBodyAction(NULL, "Defence");
+   npcaDamageLID = npca.GetBodyAction(NULL, "DamageL");
+   npcaDamageHID = npca.GetBodyAction(NULL, "DamageH");
+   npcaDieID = npca.GetBodyAction(NULL, "Die");
 
    // set the character to idle action
    curPoseID = npcaIdleID;
@@ -384,7 +439,7 @@ void GameAI(int skip)
 
 	// play character pose
 	npca.ID(npcaID);
-	npca.Play(LOOP, (float) skip, FALSE, TRUE);
+	
 	
 	npcb.ID(npcbID);
 	npcb.Play(LOOP, (float) skip, FALSE, TRUE);
@@ -405,20 +460,7 @@ void GameAI(int skip)
 	npcb.BB();
 	actor.BB();
 
-		if (FyCheckHotKeyStatus(FY_Y))
-	{
-		actor.SetCurrentAction(NULL, 0, normalAttack1ID);
-		actor.Play(ONCE, (float) skip, FALSE, TRUE);
-		if(hitcheck(napos, acpos,afDir)){
-			//actorHP=actorHP-1;
-			npca.blood-=1;
-		}
-		if(hitcheck(nbpos, acpos,afDir)){
-			//actorHP=actorHP-1;
-			npcb.blood-=1;
-		}
-	}
-
+/////keys for testing 
 	if (FyCheckHotKeyStatus(FY_L))
 		{
 			afDir[0] = ofDir[1];
@@ -449,6 +491,8 @@ void GameAI(int skip)
 			walk = true;
 		}
 
+
+///actor state
 	switch(actorState){
 		case 0:			
 			actor.Play(LOOP, (float) skip, FALSE, TRUE);
@@ -666,36 +710,229 @@ void GameAI(int skip)
 			actor.Play(ONCE, (float) skip, FALSE, TRUE);
 			actionFrame++;
 
-
 			if (actionFrame == 10){
 				if(hitcheck(napos, acpos,afDir)){
 					//actorHP=actorHP-1;
-					npca.blood-=5;
+					if (npcaState != 9)
+					{
+						npca.blood-=5;
+						npcaState = 7;
+						npca.SetCurrentAction(NULL, 0, npcaDamageLID);
+						npcaFrame = 0;
+					}		
 				}
 				if(hitcheck(nbpos, acpos,afDir)){
 					//actorHP=actorHP-1;
 					npcb.blood-=5;
 				}
 			}
+			if (actionFrame == 12)
+			{
+				attackKeyLocked = false;
+			}
 			if (actionFrame == 24)
 			{
-				actorState = 2;
-				actionFrame = 0;
-				combatWait = 150;
-				actor.SetCurrentAction(NULL, 0, combatIdleID);
+				if(normalCombo){
+					actorState = 4;
+					actionFrame = 0;
+					actor.SetCurrentAction(NULL, 0, normalAttack2ID);
+					normalCombo = false;
+				}
+				else{
+					actorState = 2;
+					actionFrame = 0;
+					combatWait = 150;
+					actor.SetCurrentAction(NULL, 0, combatIdleID);
+					movementKeyLocked = false;
+				}	
+			}
+			break;
+		case 4:
+			actor.Play(ONCE, (float) skip, FALSE, TRUE);
+			actionFrame++;
+
+			if (actionFrame == 30){
+				if(hitcheck(napos, acpos,afDir)){
+					//actorHP=actorHP-1;
+					if (npcaState != 9)
+					{
+						npca.blood-= 10;
+						npcaState = 7;
+						npca.SetCurrentAction(NULL, 0, npcaDamageLID);
+						npcaFrame = 0;
+					}	
+				}
+				if(hitcheck(nbpos, acpos,afDir)){
+					//actorHP=actorHP-1;
+					npcb.blood-=5;
+				}
+			}
+			if (actionFrame == 32)
+			{
+				attackKeyLocked = false;
+			}
+			if (actionFrame == 48)
+			{
+				if(normalCombo){
+					actorState = 5;
+					actionFrame = 0;
+					actor.SetCurrentAction(NULL, 0, normalAttack3ID);
+					normalCombo = false;
+				}
+				else{
+					actorState = 2;
+					actionFrame = 0;
+					combatWait = 150;
+					actor.SetCurrentAction(NULL, 0, combatIdleID);
+					movementKeyLocked = false;
+				}	
+			}
+			break;
+		case 5:
+			actor.Play(ONCE, (float) skip, FALSE, TRUE);
+			actionFrame++;
+
+			if (actionFrame == 28){
+				if(hitcheck(napos, acpos,afDir)){
+					//actorHP=actorHP-1;
+					if (npcaState != 9)
+					{
+						npca.blood-=20;
+						npcaState = 7;
+						npca.SetCurrentAction(NULL, 0, npcaDamageLID);
+						npcaFrame = 0;
+					}	
+				}
+				if(hitcheck(nbpos, acpos,afDir)){
+					//actorHP=actorHP-1;
+					npcb.blood-=10;
+				}
+			}
+			if (actionFrame == 30)
+			{
+				attackKeyLocked = false;
+			}
+			if (actionFrame == 46)
+			{
+				if(normalCombo){
+					actorState = 6;
+					actionFrame = 0;
+					actor.SetCurrentAction(NULL, 0, normalAttack4ID);
+					normalCombo = false;
+				}
+				else{
+					actorState = 2;
+					actionFrame = 0;
+					combatWait = 150;
+					actor.SetCurrentAction(NULL, 0, combatIdleID);
+					movementKeyLocked = false;
+				}	
+			}
+			break;
+		case 6:
+			actor.Play(ONCE, (float) skip, FALSE, TRUE);
+			actionFrame++;
+
+			if (actionFrame == 30){
+				if(hitcheck(napos, acpos,afDir)){
+					//actorHP=actorHP-1;
+					if (npcaState != 9)
+					{
+						npca.blood-=30;
+						npcaState = 7;
+						npca.SetCurrentAction(NULL, 0, npcaDamageLID);
+						npcaFrame = 0;
+					}	
+				}
+				if(hitcheck(nbpos, acpos,afDir)){
+					//actorHP=actorHP-1;
+					npcb.blood-=15;
+				}
+			}
+			if (actionFrame == 44)
+			{
+				attackKeyLocked = false;
+			}
+			if (actionFrame == 49)
+			{
+				if(normalCombo){
+					actorState = 3;
+					actionFrame = 0;
+					actor.SetCurrentAction(NULL, 0, normalAttack1ID);
+					normalCombo = false;
+				}
+				else{
+					actorState = 2;
+					actionFrame = 0;
+					combatWait = 150;
+					actor.SetCurrentAction(NULL, 0, combatIdleID);
+					movementKeyLocked = false;
+				}	
 			}
 			break;
 		default:
 			break;
 	}
 	
-	
+	// check npc die 
 
+	if (npca.blood <= 0 && npcaState != 9)
+	{
+		npcaState = 9;
+		npca.SetCurrentAction(NULL, 0, npcaDieID);
+	}
+
+	//npca state
+	switch(npcaState){
+		case 0:
+			npca.Play(LOOP, (float) skip, FALSE, TRUE);
+			break;
+		case 1:
+			npca.Play(LOOP, (float) skip, FALSE, TRUE);
+			break;
+		case 2:
+			break;
+		case 3:
+			break;
+		case 4:
+			break;
+		case 5:
+			break;
+		case 6:
+			break;
+		case 7:
+			npcaFrame++;
+			npca.Play(ONCE, (float) skip, FALSE, TRUE);
+			if (npcaFrame == 26)
+			{
+				npcaState = 0;
+				npca.SetCurrentAction(NULL, 0, npcaIdleID);
+				npcaFrame = 0;
+			}
+			break;
+		case 8:
+			npcaFrame++;
+			npca.Play(ONCE, (float) skip, FALSE, TRUE);
+			if (npcaFrame == 36)
+			{
+				npcaState = 0;
+				npca.SetCurrentAction(NULL, 0, npcaIdleID);
+				npcaFrame = 0;
+			}
+			break;
+		case 9:
+			npca.Play(ONCE, (float) skip, FALSE, TRUE);
+			break;
+		default:
+			break;
+	}
 	
 	object.GetPosition(obpos);
 	actor.GetPosition(acpos);
 	camera.GetDirection(cfDir, cuDir);
 
+
+// camera hit test
 	if(terrain.HitTest(obpos, ohitdir) > 0)
 	{
 		if(walk){
@@ -830,19 +1067,20 @@ void Movement(BYTE code, BOOL4 value)
 {
 	//FnCharacter actor;
 	actor.ID(actorID);
-
-	if(value) {
-		if (actorState == 0 || actorState == 2)
-		{
-			actorState = 1;
-			actor.SetCurrentAction(NULL, 0, runID);
+	if(!movementKeyLocked){
+		if(value) {
+			if (actorState == 0 || actorState == 2)
+			{
+				actorState = 1;
+				actor.SetCurrentAction(NULL, 0, runID);
+			}
 		}
-	}
-	else if(!FyCheckHotKeyStatus(FY_UP) && !FyCheckHotKeyStatus(FY_RIGHT) && !FyCheckHotKeyStatus(FY_LEFT) && !FyCheckHotKeyStatus(FY_DOWN)) {
-		if (actorState == 1)
-		{
-			actorState = 0;
-			actor.SetCurrentAction(NULL, 0, idleID);
+		else if(!FyCheckHotKeyStatus(FY_UP) && !FyCheckHotKeyStatus(FY_RIGHT) && !FyCheckHotKeyStatus(FY_LEFT) && !FyCheckHotKeyStatus(FY_DOWN)) {
+			if (actorState == 1)
+			{
+				actorState = 0;
+				actor.SetCurrentAction(NULL, 0, idleID);
+			}
 		}
 	}
 }
@@ -851,10 +1089,30 @@ void Attack(BYTE code, BOOL4 value)
 {
 	//FnCharacter actor;
 	actor.ID(actorID);
-
-	if(value){
-		actorState = 3;
-		actor.SetCurrentAction(NULL, 0, normalAttack1ID);
+	if(!attackKeyLocked){
+		if(value){
+			switch(actorState){
+				case 3:
+					normalCombo = true;
+					attackKeyLocked = true;
+					break;
+				case 4:
+					normalCombo = true;
+					attackKeyLocked = true;
+					break;
+				case 5:
+					normalCombo = true;
+					attackKeyLocked = true;
+					break;
+				default:
+					actorState = 3;
+					actionFrame = 0;
+					actor.SetCurrentAction(NULL, 0, normalAttack1ID);
+					attackKeyLocked = true;
+					movementKeyLocked = true;
+					break;
+			}
+		}
 	}
 }
 
