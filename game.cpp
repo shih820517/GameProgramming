@@ -463,13 +463,8 @@ void GameAI(int skip)
 	terrain.ID(tID);
 
 	actor.ID(actorID);
-
-	// play character pose
 	npca.ID(npcaID);
-	
-	
 	npcb.ID(npcbID);
-	npcb.Play(LOOP, (float) skip, FALSE, TRUE);
 
 	object.GetPosition(obpos);
 	actor.GetPosition(acpos);
@@ -1077,7 +1072,7 @@ void GameAI(int skip)
 			break;
 		case 9:
 		// die
-			npca.Play(ONCE, (float) skip, FALSE, TRUE);
+			npcb.Play(ONCE, (float) skip, FALSE, TRUE);
 			break;
 		default:
 			break;
