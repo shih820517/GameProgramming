@@ -134,9 +134,8 @@ bool moveKeyState[4] = {false, false, false, false};
 /*
 0 normal attack
 1 heavy attack
-2 guard
 */
-bool attackKeyState[3] = {false, false, false};
+bool attackKeyState[2] = {false, false};
 
 bool attackKeyLocked = false;
 bool movementKeyLocked = false;
@@ -163,9 +162,9 @@ void ZoomCam(int, int);
 
 // our function
 inline float myDist(float *apos, float *bpos); //find distance
-inline float cameraHieght(float d_oa); // give the hieght we need
-inline bool hitcheck(float *a, float *b, float afDir[3]);// check if attack hit
-bool isHit(float *apos, float *bpos, float *afDir, float attackDist, float attackAngle);
+inline float cameraHieght(float dist); // give the hieght we need
+inline bool hitcheck(float *a, float *b, float fDir[3]);// check if attack hit
+bool isHit(float *, float *, float *, float , float);
 
 MyCharacter npca(200);
 MyCharacter npcb(80);
@@ -369,7 +368,6 @@ void FyMain(int argc, char **argv)
    FyDefineHotKey(FY_DOWN, Movement, FALSE);    // Down for moving back
    FyDefineHotKey(FY_Z, Attack, FALSE);
    FyDefineHotKey(FY_X, Attack, FALSE);
-   FyDefineHotKey(FY_C, Attack, FALSE);
    FyDefineHotKey(FY_F1, Reset, FALSE);
 
    // define some mouse functions
@@ -385,21 +383,22 @@ void FyMain(int argc, char **argv)
    FyInvokeFly(TRUE);
 }
 
+
 inline float myDist(float *apos, float *bpos)
 {
 	return sqrt((apos[0]-bpos[0])*(apos[0]-bpos[0])+(apos[1]-bpos[1])*(apos[1]-bpos[1]));
 }
 
-inline float cameraHieght(float d_oa)
+inline float cameraHieght(float dist)
 {
-	return sqrt(251600.0f - d_oa * d_oa) + 60.0f;
+	return sqrt(251600.0f - dist * dist) + 60.0f;
 }
 
-inline bool hitcheck(float *a, float *b,float afDir[3])
+inline bool hitcheck(float *a, float *b,float fDir[3])
 {   
 	bool hit = false;
 	float r1 = sqrt((a[0]-b[0])*(a[0]-b[0])+(a[1]-b[1])*(a[1]-b[1]));
-	float cos1 = ((a[0]-b[0])*afDir[0] + (a[1]-b[1])*afDir[1])/(r1*sqrt(afDir[0]*afDir[0]+afDir[1]*afDir[1]));
+	float cos1 = ((a[0]-b[0])*fDir[0] + (a[1]-b[1])*fDir[1])/(r1*sqrt(fDir[0]*fDir[0]+fDir[1]*fDir[1]));
 		if(cos1 > (1/sqrt(1.5)) && r1 < 180.0f){
 				hit = true;
 		}
@@ -409,7 +408,7 @@ inline bool hitcheck(float *a, float *b,float afDir[3])
 bool isHit(float *apos, float *bpos, float *afDir, float attackDist, float attackAngle) 
 {
 	float dist = myDist(apos, bpos);
-	float cosTheta = ((apos[0] - bpos[0]) * afDir[0] + (apos[1] - bpos[1]) * afDir[1]) / (dist * sqrt(afDir[0] * afDir[0] + afDir[1] * afDir[1]));
+	float cosTheta = ((bpos[0] - apos[0]) * afDir[0] + (bpos[1] - apos[1]) * afDir[1]) / (dist * sqrt(afDir[0] * afDir[0] + afDir[1] * afDir[1]));
 	if (dist < attackDist && cosTheta > cos(attackAngle * M_PI / 360.0f))
 	{
 		return true;
@@ -417,131 +416,166 @@ bool isHit(float *apos, float *bpos, float *afDir, float attackDist, float attac
 	return false;
 }
 
-// bool moving()
-// {
-// 	if (moveKeyState[0] && moveKeyState[2])
-// 	{
-// 		/* UP and RIGHT */
-// 		afDir[0] = ofDir[0] + ofDir[1];
-// 		afDir[1] = ofDir[1] - ofDir[0];
-// 		actor.SetDirection(afDir, auDir);
-// 		if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
-// 		{
-// 			object.MoveRight(10.0f/sqrt(2.0f));
-// 			object.MoveForward(10.0f/sqrt(2.0f));
-// 			walk = true;
-// 		}
-// 	}
-// 	else if (moveKeyState[0] && moveKeyState[3])
-// 	{
-// 		/* UP & LEFT */
-// 		afDir[0] = ofDir[0] - ofDir[1];
-// 		afDir[1] = ofDir[1] + ofDir[0];
-// 		actor.SetDirection(afDir, auDir);
-// 		if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
-// 		{
-// 			object.MoveRight(-10.0f/sqrt(2.0f));
-// 			object.MoveForward(10.0f/sqrt(2.0f));
-// 			walk = true;
-// 		}
-// 	}
-// 	else if (moveKeyState[1] && moveKeyState[2])
-// 	{
-// 		/* DOWN & RIGHT */
-// 		afDir[0] = -ofDir[0] + ofDir[1];
-// 		afDir[1] = -ofDir[1] - ofDir[0];
-// 		actor.SetDirection(afDir, auDir);
-// 		if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
-// 		{
-// 			object.MoveRight(10.0f/sqrt(2.0f));
-// 			object.MoveForward(-10.0f/sqrt(2.0f));
-// 			walk = true;
-// 		}
-// 	}
-// 	else if (moveKeyState[1] && moveKeyState[3])
-// 	{
-// 		/* DOWN & LEFT */
-// 		afDir[0] = -ofDir[0] - ofDir[1];
-// 		afDir[1] = -ofDir[1] + ofDir[0];
-// 		actor.SetDirection(afDir, auDir);
-// 		if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
-// 		{
-// 			object.MoveRight(-10.0f/sqrt(2.0f));
-// 			object.MoveForward(-10.0f/sqrt(2.0f));
-// 			walk = true;
-// 		}
-// 	}
-// 	else if (moveKeyState[0])
-// 	{
-// 		/* UP */
-// 		afDir[0] = ofDir[0];
-// 		afDir[1] = ofDir[1];
-// 		actor.SetDirection(afDir, auDir);
-// 		if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
-// 		{
-// 			object.MoveForward(10.0f);
-// 			walk = true;
-// 		}
-// 	}
-// 	else if (moveKeyState[1])
-// 	{
-// 		/* DOWN */
-// 		afDir[0] = -ofDir[0];
-// 		afDir[1] = -ofDir[1];
-// 		actor.SetDirection(afDir, auDir);
-// 		if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
-// 		{
-// 			object.MoveForward(-10.0f);
-// 			walk = true;
-// 		}
-// 	}
-// 	else if (moveKeyState[2])
-// 	{
-// 		/* RIGHT */
-// 		afDir[0] = ofDir[1];
-// 		afDir[1] = -ofDir[0];
-// 		actor.SetDirection(afDir, auDir);
-// 		actor.TurnRight(TURN_A/2.0f);
-// 		if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
-// 		{
-// 			actor.TurnRight(TURN_A/2.0f);
-// 			object.TurnRight(TURN_A);
-// 		}
-// 		else
-// 		{
-// 			actor.TurnRight(TURN_A/2.0f);
-// 			object.TurnRight(TURN_A/2.0f);
-// 			object.MoveRight(-10.f);
-// 			object.TurnRight(TURN_A/2.0f);
-// 			walk = true;
-// 		}
-// 	}
-// 	else if (moveKeyState[3])
-// 	{
-// 		/* LEFT */
-// 		afDir[0] = -ofDir[1];
-// 		afDir[1] = ofDir[0];
-// 		actor.SetDirection(afDir, auDir);	
-// 		actor.TurnRight(-TURN_A/2.0f);
-// 		if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
-// 		{
-// 			actor.TurnRight(-TURN_A/2.0f);
-// 			object.TurnRight(-TURN_A);
-// 		}
-// 		else
-// 		{
-// 			actor.TurnRight(-TURN_A/2.0f);
-// 			object.TurnRight(-TURN_A/2.0f);
-// 			object.MoveRight(10.f);
-// 			object.TurnRight(-TURN_A/2.0f);
-// 			walk = true;
-// 		}
-// 	}
-// 	else
-// 	{
-// 		/* not moving */
-// 	}
-// }
+inline float turnDegree(float dist, float stepLength)
+{
+	return acos((dist * dist + dist * dist - stepLength * stepLength) / (2 * dist * dist)) * 180.0f / M_PI;
+}
+
+bool moving()
+{
+	FnObject object;
+
+	object.ID(oID);
+
+	float pos[3], fDir[3], uDir[3], opos[3], ofDir[3], ouDir[3];
+
+	actor.GetPosition(pos);
+	object.GetPosition(opos);
+
+	actor.GetDirection(fDir, uDir);
+	object.GetDirection(ofDir, ouDir);
+	
+	if (moveKeyState[0] && moveKeyState[2])
+	{
+		/* UP and RIGHT */
+		fDir[0] = ofDir[0] + ofDir[1];
+		fDir[1] = ofDir[1] - ofDir[0];
+		actor.SetDirection(fDir, uDir);
+		if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
+		{
+			object.MoveRight(10.0f/sqrt(2.0f));
+			object.MoveForward(10.0f/sqrt(2.0f));
+			return true;
+		}
+		return false;
+	}
+	else if (moveKeyState[0] && moveKeyState[3])
+	{
+		/* UP & LEFT */
+		fDir[0] = ofDir[0] - ofDir[1];
+		fDir[1] = ofDir[1] + ofDir[0];
+		actor.SetDirection(fDir, uDir);
+		if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
+		{
+			object.MoveRight(-10.0f/sqrt(2.0f));
+			object.MoveForward(10.0f/sqrt(2.0f));
+			return true;
+		}
+		return false;
+	}
+	else if (moveKeyState[1] && moveKeyState[2])
+	{
+		/* DOWN & RIGHT */
+		fDir[0] = -ofDir[0] + ofDir[1];
+		fDir[1] = -ofDir[1] - ofDir[0];
+		actor.SetDirection(fDir, uDir);
+		if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
+		{
+			object.MoveRight(10.0f/sqrt(2.0f));
+			object.MoveForward(-10.0f/sqrt(2.0f));
+			return true;
+		}
+		return false;
+	}
+	else if (moveKeyState[1] && moveKeyState[3])
+	{
+		/* DOWN & LEFT */
+		fDir[0] = -ofDir[0] - ofDir[1];
+		fDir[1] = -ofDir[1] + ofDir[0];
+		actor.SetDirection(fDir, uDir);
+		if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
+		{
+			object.MoveRight(-10.0f/sqrt(2.0f));
+			object.MoveForward(-10.0f/sqrt(2.0f));
+			return true;
+		}
+		return false;
+	}
+	else if (moveKeyState[0])
+	{
+		/* UP */
+		fDir[0] = ofDir[0];
+		fDir[1] = ofDir[1];
+		actor.SetDirection(fDir, uDir);
+		if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
+		{
+			object.MoveForward(10.0f);
+			return true;
+		}
+		return false;
+	}
+	else if (moveKeyState[1])
+	{
+		/* DOWN */
+		fDir[0] = -ofDir[0];
+		fDir[1] = -ofDir[1];
+		actor.SetDirection(fDir, uDir);
+		if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
+		{
+			object.MoveForward(-10.0f);
+			return true;
+		}
+		return false;
+	}
+	else if (moveKeyState[2])
+	{
+		/* RIGHT */
+		fDir[0] = ofDir[1];
+		fDir[1] = -ofDir[0];
+		actor.SetDirection(fDir, uDir);
+		actor.TurnRight(turnDegree(myDist(pos, opos), 10.0f) / 2.0f);
+		if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
+		{
+			actor.TurnRight(turnDegree(myDist(pos, opos), 10.0f) / 2.0f);
+			object.TurnRight(turnDegree(myDist(pos, opos), 10.0f));
+			return false;
+		}
+		else
+		{
+			actor.TurnRight(turnDegree(myDist(pos, opos), 10.0f) / 2.0f);
+			object.TurnRight(turnDegree(myDist(pos, opos), 10.0f) / 2.0f);
+			object.MoveRight(-10.f);
+			object.TurnRight(turnDegree(myDist(pos, opos), 10.0f) / 2.0f);
+			return true;
+		}
+	}
+	else if (moveKeyState[3])
+	{
+		/* LEFT */
+		fDir[0] = -ofDir[1];
+		fDir[1] = ofDir[0];
+		actor.SetDirection(fDir, uDir);	
+		actor.TurnRight(-turnDegree(myDist(pos, opos), 10.0f) / 2.0f);
+		if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
+		{
+			actor.TurnRight(-turnDegree(myDist(pos, opos), 10.0f) / 2.0f);
+			object.TurnRight(-turnDegree(myDist(pos, opos), 10.0f));
+			return false;
+		}
+		else
+		{
+			actor.TurnRight(-turnDegree(myDist(pos, opos), 10.0f) / 2.0f);
+			object.TurnRight(-turnDegree(myDist(pos, opos), 10.0f) / 2.0f);
+			object.MoveRight(10.f);
+			object.TurnRight(-turnDegree(myDist(pos, opos), 10.0f) / 2.0f);
+			return true;
+		}
+	}
+	else
+	{
+		if (combatWait)
+		{
+			actor.state = 2;
+			actor.SetCurrentAction(NULL, 0, combatIdleID);
+		}
+		else
+		{
+			actor.state = 0;
+			actor.SetCurrentAction(NULL, 0, idleID);
+		}
+		return false;
+	}
+}
 
 
 /*-------------------------------------------------------------
@@ -555,7 +589,9 @@ void GameAI(int skip)
 
 	bool walk = false;
 	 
-	float afDir[3], auDir[3], cfDir[3], cuDir[3], ofDir[3], ouDir[3], obpos[3], acpos[3], napos[3], nbpos[3], ohitdir[3];
+	float pos[3], fDir[3], uDir[3], ohitdir[3];
+	float opos[3], cfDir[3], cuDir[3];
+	float apos[3], bpos[3];
 
     ohitdir[0] = 0.0f; ohitdir[1] = 0.0f; ohitdir[2] = -1.0f;
 
@@ -563,51 +599,21 @@ void GameAI(int skip)
 	camera.ID(cID);
 	terrain.ID(tID);
 
-	object.GetPosition(obpos);
-	actor.GetPosition(acpos);
-	npca.GetPosition(napos);
-	npcb.GetPosition(nbpos);
+	actor.GetPosition(pos);
+	npca.GetPosition(apos);
+	npcb.GetPosition(bpos);
 
-	float d_oa = myDist(obpos, acpos);
-
-	float TURN_A = acos((d_oa*d_oa + d_oa*d_oa - 100.0f) / (d_oa*d_oa + d_oa*d_oa)) * 180.0f / M_PI;
-
-	actor.GetDirection(afDir, auDir);
-	object.GetDirection(ofDir, ouDir);
+	actor.GetDirection(fDir, uDir);
 
 	npca.BB();
 	npcb.BB();
 	actor.BB();
 
-/////keys for testing 
-	if (FyCheckHotKeyStatus(FY_L))
+	// check if running
+	if (actor.state != 1 && movementKeyLocked == false && (moveKeyState[0] || moveKeyState[1] || moveKeyState[2] || moveKeyState[3]))
 	{
-			afDir[0] = ofDir[0];
-			afDir[1] = ofDir[1];
-			actor.SetDirection(afDir, auDir);
-			actor.TurnRight(TURN_A/2.0f);
-
-			
-			actor.TurnRight(TURN_A/2.0f);
-			object.TurnRight(TURN_A/2.0f);
-			object.MoveRight(-10.f);
-			object.TurnRight(TURN_A/2.0f);
-			walk = true;
-	}
-
-	if (FyCheckHotKeyStatus(FY_K))
-	{
-			afDir[0] = ofDir[0];
-			afDir[1] = ofDir[1];
-			actor.SetDirection(afDir, auDir);
-			actor.TurnRight(-TURN_A/2.0f);
-
-			
-			actor.TurnRight(-TURN_A/2.0f);
-			object.TurnRight(-TURN_A/2.0f);
-			object.MoveRight(10.f);
-			object.TurnRight(-TURN_A/2.0f);
-			walk = true;
+		actor.state = 1;
+		actor.SetCurrentAction(NULL, 0, runID);
 	}
 
 /*
@@ -641,191 +647,7 @@ void GameAI(int skip)
 			{
 				combatWait--;
 			}
-
-			if (FyCheckHotKeyStatus(FY_UP))
-			{
-				if (FyCheckHotKeyStatus(FY_RIGHT))
-				{
-					/* UP and RIGHT */
-					afDir[0] = ofDir[0] + ofDir[1];
-					afDir[1] = ofDir[1] - ofDir[0];
-					actor.SetDirection(afDir, auDir);
-					if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
-					{
-						object.MoveRight(10.0f/sqrt(2.0f));
-						object.MoveForward(10.0f/sqrt(2.0f));
-						walk = true;
-					}
-				}
-				else if (FyCheckHotKeyStatus(FY_LEFT))
-				{
-					/* UP and LEFT */
-					afDir[0] = ofDir[0] - ofDir[1];
-					afDir[1] = ofDir[1] + ofDir[0];
-					actor.SetDirection(afDir, auDir);
-					if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
-					{
-						object.MoveRight(-10.0f/sqrt(2.0f));
-						object.MoveForward(10.0f/sqrt(2.0f));
-						walk = true;
-					}
-				}
-				else 
-				{
-					/* UP only */
-					afDir[0] = ofDir[0];
-					afDir[1] = ofDir[1];
-					actor.SetDirection(afDir, auDir);
-					if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
-					{
-						object.MoveForward(10.0f);
-						walk = true;
-					}
-				}
-			}
-			else if (FyCheckHotKeyStatus(FY_DOWN))
-			{
-				if (FyCheckHotKeyStatus(FY_RIGHT))
-				{
-					/* DOWN and RIGHT */
-					afDir[0] = -ofDir[0] + ofDir[1];
-					afDir[1] = -ofDir[1] - ofDir[0];
-					actor.SetDirection(afDir, auDir);
-					if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
-					{
-						object.MoveRight(10.0f/sqrt(2.0f));
-						object.MoveForward(-10.0f/sqrt(2.0f));
-						walk = true;
-					}
-				}
-				else if (FyCheckHotKeyStatus(FY_LEFT))
-				{
-					/* DOWN and LEFT */
-					afDir[0] = -ofDir[0] - ofDir[1];
-					afDir[1] = -ofDir[1] + ofDir[0];
-					actor.SetDirection(afDir, auDir);
-					if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
-					{
-						object.MoveRight(-10.0f/sqrt(2.0f));
-						object.MoveForward(-10.0f/sqrt(2.0f));
-						walk = true;
-					}
-				}
-				else 
-				{
-					/* DOWN only */
-					afDir[0] = -ofDir[0];
-					afDir[1] = -ofDir[1];
-					actor.SetDirection(afDir, auDir);
-					if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
-					{
-						object.MoveForward(-10.0f);
-						walk = true;
-					}
-				}
-			}
-			else if (FyCheckHotKeyStatus(FY_RIGHT))
-			{
-				if (FyCheckHotKeyStatus(FY_UP))
-				{
-					/* RIGHT and UP */
-					afDir[0] = ofDir[1] + ofDir[0];
-					afDir[1] = -ofDir[0] + ofDir[1];
-					actor.SetDirection(afDir, auDir);
-					if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
-					{
-						object.MoveRight(10.0f/sqrt(2.0f));
-						object.MoveForward(10.0f/sqrt(2.0f));
-						walk = true;
-					}
-				}
-				else if (FyCheckHotKeyStatus(FY_DOWN))
-				{
-					/* RIGHT and DOWN */
-					afDir[0] = ofDir[1] - ofDir[0];
-					afDir[1] = -ofDir[0] - ofDir[1];
-					actor.SetDirection(afDir, auDir);
-					if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
-					{
-						object.MoveRight(10.0f/sqrt(2.0f));
-						object.MoveForward(-10.0f/sqrt(2.0f));
-						walk = true;
-					}
-				}
-				else 
-				{
-					/* RIGHT only */
-					afDir[0] = ofDir[1];
-					afDir[1] = -ofDir[0];
-					actor.SetDirection(afDir, auDir);
-					actor.TurnRight(TURN_A/2.0f);
-
-					if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
-					{
-						actor.TurnRight(TURN_A/2.0f);
-						object.TurnRight(TURN_A);
-					}
-					else
-					{
-						actor.TurnRight(TURN_A/2.0f);
-						object.TurnRight(TURN_A/2.0f);
-						object.MoveRight(-10.f);
-						object.TurnRight(TURN_A/2.0f);
-						walk = true;
-					}
-				}
-			}
-			else if (FyCheckHotKeyStatus(FY_LEFT))
-			{
-				if (FyCheckHotKeyStatus(FY_UP))
-				{
-					/* LEFT and UP */
-					afDir[0] = -ofDir[1] + ofDir[0];
-					afDir[1] = ofDir[0] + ofDir[1];
-					actor.SetDirection(afDir, auDir);
-					if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
-					{
-						object.MoveRight(-10.0f/sqrt(2.0f));
-						object.MoveForward(10.0f/sqrt(2.0f));
-						walk = true;
-					}
-				}
-				else if (FyCheckHotKeyStatus(FY_DOWN))
-				{
-					/* LEFT and DOWN */
-					afDir[0] = -ofDir[1] - ofDir[0];
-					afDir[1] = ofDir[0] - ofDir[1];
-					actor.SetDirection(afDir, auDir);
-					if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
-					{
-						object.MoveRight(-10.0f/sqrt(2.0f));
-						object.MoveForward(-10.0f/sqrt(2.0f));
-						walk = true;
-					}
-				}
-				else 
-				{
-					/* LEFT only */
-					afDir[0] = -ofDir[1];
-					afDir[1] = ofDir[0];
-					actor.SetDirection(afDir, auDir);	
-					actor.TurnRight(-TURN_A/2.0f);
-					if(actor.MoveForward(10.0f, TRUE, FALSE, FALSE, TRUE) == WALK)
-					{
-						actor.TurnRight(-TURN_A/2.0f);
-						object.TurnRight(-TURN_A);
-					}
-					else
-					{
-						actor.TurnRight(-TURN_A/2.0f);
-						object.TurnRight(-TURN_A/2.0f);
-						object.MoveRight(10.f);
-						object.TurnRight(-TURN_A/2.0f);
-						walk = true;
-					}
-				}
-			}
-
+			walk = moving();
 			break;
 		case 2:
 		// combat idle
@@ -846,12 +668,12 @@ void GameAI(int skip)
 			}
 			break;
 		case 3:
-		// normal attack 1			
+		// normal attack 1 25 frames	
 			actor.Play(ONCE, (float) skip, FALSE, TRUE);
 			actor.frame++;
 
 			if (actor.frame == 10){
-				if(hitcheck(napos, acpos,afDir)){
+				if(hitcheck(apos, pos,fDir)){
 					//actorHP=actorHP-1;
 					if (npca.state != 9)
 					{
@@ -861,7 +683,7 @@ void GameAI(int skip)
 						npca.frame = 0;
 					}		
 				}
-				if(hitcheck(nbpos, acpos,afDir)){
+				if(hitcheck(bpos, pos,fDir)){
 					//actorHP=actorHP-1;
 					if (npcb.state != 9)
 					{
@@ -876,7 +698,7 @@ void GameAI(int skip)
 			{
 				attackKeyLocked = false;
 			}
-			if (actor.frame == 22)
+			if (actor.frame == 24)
 			{
 				if(normalCombo){
 					actor.state = 4;
@@ -894,12 +716,12 @@ void GameAI(int skip)
 			}
 			break;
 		case 4:
-		// normal attack 2
+		// normal attack 2 48 frames
 			actor.Play(ONCE, (float) skip, FALSE, TRUE);
 			actor.frame++;
 
-			if (actor.frame == 30){
-				if(hitcheck(napos, acpos,afDir)){
+			if (actor.frame == 28){
+				if(hitcheck(apos, pos,fDir)){
 					//actorHP=actorHP-1;
 					if (npca.state != 9)
 					{
@@ -909,7 +731,7 @@ void GameAI(int skip)
 						npca.frame = 0;
 					}	
 				}
-				if(hitcheck(nbpos, acpos,afDir)){
+				if(hitcheck(bpos, pos,fDir)){
 					//actorHP=actorHP-1;
 					if (npcb.state != 9)
 					{
@@ -924,7 +746,7 @@ void GameAI(int skip)
 			{
 				attackKeyLocked = false;
 			}
-			if (actor.frame == 46)
+			if (actor.frame == 47)
 			{
 				if(normalCombo){
 					actor.state = 5;
@@ -942,12 +764,12 @@ void GameAI(int skip)
 			}
 			break;
 		case 5:
-		// normal attack 3
+		// normal attack 3 46 frames
 			actor.Play(ONCE, (float) skip, FALSE, TRUE);
 			actor.frame++;
 
 			if (actor.frame == 28){
-				if(hitcheck(napos, acpos,afDir)){
+				if(hitcheck(apos, pos,fDir)){
 					//actorHP=actorHP-1;
 					if (npca.state != 9)
 					{
@@ -957,7 +779,7 @@ void GameAI(int skip)
 						npca.frame = 0;
 					}	
 				}
-				if(hitcheck(nbpos, acpos,afDir)){
+				if(hitcheck(bpos, pos,fDir)){
 					//actorHP=actorHP-1;
 					if (npcb.state != 9)
 					{
@@ -972,7 +794,7 @@ void GameAI(int skip)
 			{
 				attackKeyLocked = false;
 			}
-			if (actor.frame == 44)
+			if (actor.frame == 45)
 			{
 				if(normalCombo){
 					actor.state = 6;
@@ -990,12 +812,12 @@ void GameAI(int skip)
 			}
 			break;
 		case 6:
-		// normal attack 4
+		// normal attack 4 49 frames
 			actor.Play(ONCE, (float) skip, FALSE, TRUE);
 			actor.frame++;
 
 			if (actor.frame == 30){
-				if(hitcheck(napos, acpos,afDir)){
+				if(hitcheck(apos, pos,fDir)){
 					//actorHP=actorHP-1;
 					if (npca.state != 9)
 					{
@@ -1005,7 +827,7 @@ void GameAI(int skip)
 						npca.frame = 0;
 					}	
 				}
-				if(hitcheck(nbpos, acpos,afDir)){
+				if(hitcheck(bpos, pos,fDir)){
 					//actorHP=actorHP-1;
 					if (npcb.state != 9)
 					{
@@ -1020,7 +842,7 @@ void GameAI(int skip)
 			{
 				attackKeyLocked = false;
 			}
-			if (actor.frame == 47)
+			if (actor.frame == 48)
 			{
 				if(normalCombo){
 					actor.state = 3;
@@ -1038,28 +860,28 @@ void GameAI(int skip)
 			}
 			break;
 		case 7:
-		// heavy attack 1
+		// heavy attack 1 73 frames
 			break;
 		case 8:
-		// heavy attack 2
+		// heavy attack 2 59 frames
 			break;
 		case 9:
-		// heavy attack 3
+		// heavy attack 3 57 frames
 			break;
 		case 10:
-		// ultimate attack
+		// ultimate attack 121 frames
 			break;
 		case 11:
-		// guard
+		// guard 34 frames
 			break;
 		case 12:
-		// heavy damage
+		// heavy damage 24 frames
 			break;
 		case 13:
-		// right damage
+		// right damage 24 frames
 			break;
 		case 14:
-		//left damage
+		// left damage 20 frames
 			break;
 		case 15:
 		// die
@@ -1104,22 +926,22 @@ void GameAI(int skip)
 			npca.Play(LOOP, (float) skip, FALSE, TRUE);
 			break;
 		case 2:
-		// attackL 1
+		// attackL 1 36 frames
 			break;
 		case 3:
-		// attackL 2
+		// attackL 2 41 frames
 			break;
 		case 4:
-		// attack H
+		// attack H 86 frames
 			break;
 		case 5:
-		// heavy attack
+		// heavy attack 66 frames
 			break;
 		case 6:
-		// defence
+		// defence 41 frames
 			break;
 		case 7:
-		// damage L
+		// damage L 26
 			npca.frame++;
 			npca.Play(ONCE, (float) skip, FALSE, TRUE);
 			if (npca.frame == 25)
@@ -1130,7 +952,7 @@ void GameAI(int skip)
 			}
 			break;
 		case 8:
-		// damageH
+		// damageH 36
 			npca.frame++;
 			npca.Play(ONCE, (float) skip, FALSE, TRUE);
 			if (npca.frame == 35)
@@ -1171,22 +993,24 @@ void GameAI(int skip)
 			npcb.Play(LOOP, (float) skip, FALSE, TRUE);
 			break;
 		case 2:
-		// move right
+		// move right 
+			npcb.Play(LOOP, (float) skip, FALSE, TRUE);
 			break;
 		case 3:
-		// move left
+		// move left 
+			npcb.Play(LOOP, (float) skip, FALSE, TRUE);
 			break;
 		case 4:
-		// normal attack 1
+		// normal attack 1 36 frames
 			break;
 		case 5:
-		// normal attack 2
+		// normal attack 2 26 frames
 			break;
 		case 6:
-		// heavy attack 1
+		// heavy attack 1 31 frames
 			break;
 		case 7:
-		// damage1
+		// damage1 16 frames
 			npcb.frame++;
 			npcb.Play(ONCE, (float) skip, FALSE, TRUE);
 			if (npcb.frame == 15)
@@ -1197,7 +1021,7 @@ void GameAI(int skip)
 			}
 			break;
 		case 8:
-		// damage2
+		// damage2 26 frames
 			npcb.frame++;
 			npcb.Play(ONCE, (float) skip, FALSE, TRUE);
 			if (npcb.frame == 25)
@@ -1217,35 +1041,37 @@ void GameAI(int skip)
 
 
 // camera hit test	
-	object.GetPosition(obpos);
-	actor.GetPosition(acpos);
+	object.GetPosition(opos);
+	actor.GetPosition(pos);
 	camera.GetDirection(cfDir, cuDir);
 
-	if(terrain.HitTest(obpos, ohitdir) > 0)
+	float d_oa = myDist(opos, pos);
+
+	if(terrain.HitTest(opos, ohitdir) > 0)
 	{
 		if(walk){
 			if(d_oa < 500.0f)
 			{
 				object.MoveForward(-10.0f);
-				object.GetPosition(obpos);
-				d_oa = myDist(obpos, acpos);
+				object.GetPosition(opos);
+				d_oa = myDist(opos, pos);
 				if(d_oa > 500.0f){
-					obpos[2] = cameraHieght(500.0f);
-					obpos[0] = acpos[0] - sqrt(250000.0f / (1 + (cfDir[1] * cfDir[1]) / (cfDir[0] * cfDir[0]))) * cfDir[0] / fabs(cfDir[0]);
-					obpos[1] = acpos[1] - sqrt(250000.0f / (1 + (cfDir[0] * cfDir[0]) / (cfDir[1] * cfDir[1]))) * cfDir[1] / fabs(cfDir[1]);
-					object.SetPosition(obpos);
-					cfDir[0] = acpos[0] - obpos[0];
-					cfDir[1] = acpos[1] - obpos[1];
-					cfDir[2] = acpos[2] + 60.0f - obpos[2];
+					opos[2] = cameraHieght(500.0f);
+					opos[0] = pos[0] - sqrt(250000.0f / (1 + (cfDir[1] * cfDir[1]) / (cfDir[0] * cfDir[0]))) * cfDir[0] / fabs(cfDir[0]);
+					opos[1] = pos[1] - sqrt(250000.0f / (1 + (cfDir[0] * cfDir[0]) / (cfDir[1] * cfDir[1]))) * cfDir[1] / fabs(cfDir[1]);
+					object.SetPosition(opos);
+					cfDir[0] = pos[0] - opos[0];
+					cfDir[1] = pos[1] - opos[1];
+					cfDir[2] = pos[2] + 60.0f - opos[2];
 					cuDir[2] =  (-cfDir[0] * cuDir[0] - cfDir[1] * cuDir[1]) / cfDir[2];
  					camera.SetDirection(cfDir, cuDir);
 				}
 				else{
-					obpos[2] = cameraHieght(d_oa);
-					object.SetPosition(obpos);
-					cfDir[0] = acpos[0] - obpos[0];
-					cfDir[1] = acpos[1] - obpos[1];
-					cfDir[2] = acpos[2] + 60.0f - obpos[2];
+					opos[2] = cameraHieght(d_oa);
+					object.SetPosition(opos);
+					cfDir[0] = pos[0] - opos[0];
+					cfDir[1] = pos[1] - opos[1];
+					cfDir[2] = pos[2] + 60.0f - opos[2];
 					cuDir[2] =  (-cfDir[0] * cuDir[0] - cfDir[1] * cuDir[1]) / cfDir[2];
  					camera.SetDirection(cfDir, cuDir);
  				}
@@ -1255,13 +1081,13 @@ void GameAI(int skip)
 	else 
 	{
        	object.MoveForward(10.0f); 
-       	object.GetPosition(obpos);
-		d_oa = myDist(obpos, acpos);
-		obpos[2] = cameraHieght(d_oa);
-		object.SetPosition(obpos);
-		cfDir[0] = acpos[0] - obpos[0];
-		cfDir[1] = acpos[1] - obpos[1];
-		cfDir[2] = acpos[2] + 60.0f - obpos[2];
+       	object.GetPosition(opos);
+		d_oa = myDist(opos, pos);
+		opos[2] = cameraHieght(d_oa);
+		object.SetPosition(opos);
+		cfDir[0] = pos[0] - opos[0];
+		cfDir[1] = pos[1] - opos[1];
+		cfDir[2] = pos[2] + 60.0f - opos[2];
 		cuDir[2] =  (-cfDir[0] * cuDir[0] - cfDir[1] * cuDir[1]) / cfDir[2];
 		camera.SetDirection(cfDir, cuDir);
 	}
@@ -1286,11 +1112,14 @@ void RenderIt(int skip)
    FnObject object;
    object.ID(oID);
 
-	float pos[3], fDir[3], uDir[3], opos[3],apos[3];
-	camera.GetPosition(pos);
-	camera.GetDirection(fDir, uDir);
-	object.GetPosition(opos);
- 	actor.GetPosition(apos);
+	float cpos[3], cfDir[3], cuDir[3], pos[3], apos[3], bpos[3];
+
+	camera.GetPosition(cpos);
+	camera.GetDirection(cfDir, cuDir);
+
+ 	actor.GetPosition(pos);
+ 	npca.GetPosition(apos);
+ 	npcb.GetPosition(bpos);
 
    // show frame rate
    static char string[128];
@@ -1316,20 +1145,31 @@ void RenderIt(int skip)
    text.Begin(vID);
    text.Write(string, 20, 20, 255, 0, 0);
 
-   char posS[256], fDirS[256], uDirS[256], dis[256], OposS[256], AposS[256];
-   sprintf(posS, "pos: %8.3f %8.3f %8.3f", pos[0], pos[1], pos[2]);
-   sprintf(fDirS, "facing: %8.3f %8.3f %8.3f", fDir[0], fDir[1], fDir[2]);
-   sprintf(uDirS, "up: %8.3f %8.3f %8.3f", uDir[0], uDir[1], uDir[2]);
-   sprintf(OposS, "opos: %8.3f %8.3f %8.3f", opos[0], opos[1], opos[2]);
-   sprintf(AposS, "apos: %8.3f %8.3f %8.3f", apos[0], apos[1], apos[2]);
-   sprintf(dis, "oadis: %8.3f", myDist(opos,apos));
+   char posS[256], aposS[256], bposS[256], distS[256];
+   char cposS[256], cfDirS[256], cuDirS[256];
+   char actorBloodS[256], npcaBloodS[256], npcbBloodS[256];
 
-   text.Write(posS, 20, 35, 255, 255, 0);
-   text.Write(fDirS, 20, 50, 255, 255, 0);
-   text.Write(uDirS, 20, 65, 255, 255, 0);
-   text.Write(dis, 20, 95, 255, 255, 0);
-   text.Write(OposS, 20, 110, 255, 255, 0);
-   text.Write(AposS, 20, 125, 255, 255, 0);
+   sprintf(cposS, "cpos: %8.3f %8.3f %8.3f", cpos[0], cpos[1], cpos[2]);
+   sprintf(cfDirS, "cfacing: %8.3f %8.3f %8.3f", cfDir[0], cfDir[1], cfDir[2]);
+   sprintf(cuDirS, "cup: %8.3f %8.3f %8.3f", cuDir[0], cuDir[1], cuDir[2]);
+   sprintf(posS, "pos: %8.3f %8.3f %8.3f", pos[0], pos[1], pos[2]);
+   sprintf(aposS, "apos: %8.3f %8.3f %8.3f", apos[0], apos[1], apos[2]);
+   sprintf(bposS, "bpos: %8.3f %8.3f %8.3f", bpos[0], bpos[1], bpos[2]);
+   sprintf(distS, "dist: %8.3f", myDist(cpos, pos));
+   sprintf(actorBloodS, "Actor HP: %d / %d", actor.blood, actor.fullBlood);
+   sprintf(npcaBloodS, "Npc A HP: %d / %d", npca.blood, npca.fullBlood);
+   sprintf(npcbBloodS, "Npc B HP: %d / %d", npcb.blood, npcb.fullBlood);
+
+   text.Write(cposS, 20, 35, 255, 255, 0);
+   text.Write(cfDirS, 20, 50, 255, 255, 0);
+   text.Write(cuDirS, 20, 65, 255, 255, 0);
+   text.Write(distS, 20, 95, 255, 255, 0);
+   text.Write(posS, 20, 110, 255, 255, 0);
+   text.Write(aposS, 20, 125, 255, 255, 0);
+   text.Write(bposS, 20, 140, 255, 255, 0);
+   text.Write(actorBloodS, 20, 140, 255, 255, 0);
+   text.Write(npcaBloodS, 20, 155, 255, 255, 0);
+   text.Write(npcbBloodS, 20, 170, 255, 255, 0);
 
    text.End();
 
@@ -1343,34 +1183,6 @@ void RenderIt(int skip)
   C.Wang 1103, 2006
  -------------------*/
 void Movement(BYTE code, BOOL4 value)
-{
-	if(!movementKeyLocked){
-		if(value) {
-			if (actor.state == 0 || actor.state == 2)
-			{
-				actor.state = 1;
-				actor.SetCurrentAction(NULL, 0, runID);
-			}
-		}
-		else if(!FyCheckHotKeyStatus(FY_UP) && !FyCheckHotKeyStatus(FY_RIGHT) && !FyCheckHotKeyStatus(FY_LEFT) && !FyCheckHotKeyStatus(FY_DOWN)) {
-			if (actor.state == 1)
-			{
-				if(combatWait){
-					actor.state = 2;
-					actor.SetCurrentAction(NULL, 0, combatIdleID);
-
-				}
-				else
-				{
-					actor.state = 0;
-					actor.SetCurrentAction(NULL, 0, idleID);
-				}
-			}
-		}
-	}
-}
-
-void Movement1(BYTE code, BOOL4 value)
 {
 	if (value)
 	{
@@ -1445,32 +1257,24 @@ void Attack1(BYTE code, BOOL4 value)
 {
 	if (value)
 	{
-		if (code == FY_Z)
+		if (code == FY_X)
 		{
 			attackKeyState[0] = true;
 		}
-		else if (code == FY_X)
-		{
-			attackKeyState[1] = true;
-		}
 		else
 		{
-			attackKeyState[2] = true;
+			attackKeyState[1] = true;
 		}
 	}
 	else
 	{
-		if (code == FY_Z)
+		if (code == FY_X)
 		{
 			attackKeyState[0] = false;
 		}
-		else if (code == FY_X)
-		{
-			attackKeyState[1] = false;
-		}
 		else
 		{
-			attackKeyState[2] = false;
+			attackKeyState[1] = false;
 		}
 	}
 }
