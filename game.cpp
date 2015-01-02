@@ -391,7 +391,7 @@ inline float myDist(float *apos, float *bpos)
 
 inline float cameraHieght(float dist)
 {
-	return sqrt(251600.0f - dist * dist) + 60.0f;
+	return sqrt(641600.0f - dist * dist) + 60.0f;
 }
 
 inline bool hitcheck(float *a, float *b,float fDir[3])
@@ -1050,15 +1050,15 @@ void GameAI(int skip)
 	if(terrain.HitTest(opos, ohitdir) > 0)
 	{
 		if(walk){
-			if(d_oa < 500.0f)
+			if(d_oa < 800.0f)
 			{
 				object.MoveForward(-10.0f);
 				object.GetPosition(opos);
 				d_oa = myDist(opos, pos);
-				if(d_oa > 500.0f){
-					opos[2] = cameraHieght(500.0f);
-					opos[0] = pos[0] - sqrt(250000.0f / (1 + (cfDir[1] * cfDir[1]) / (cfDir[0] * cfDir[0]))) * cfDir[0] / fabs(cfDir[0]);
-					opos[1] = pos[1] - sqrt(250000.0f / (1 + (cfDir[0] * cfDir[0]) / (cfDir[1] * cfDir[1]))) * cfDir[1] / fabs(cfDir[1]);
+				if(d_oa > 800.0f){
+					opos[2] = cameraHieght(800.0f);
+					opos[0] = pos[0] - sqrt(640000.0f / (1 + (cfDir[1] * cfDir[1]) / (cfDir[0] * cfDir[0]))) * cfDir[0] / fabs(cfDir[0]);
+					opos[1] = pos[1] - sqrt(640000.0f / (1 + (cfDir[0] * cfDir[0]) / (cfDir[1] * cfDir[1]))) * cfDir[1] / fabs(cfDir[1]);
 					object.SetPosition(opos);
 					cfDir[0] = pos[0] - opos[0];
 					cfDir[1] = pos[1] - opos[1];
