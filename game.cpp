@@ -131,6 +131,12 @@ int combatWait; // time to return idle
 */
 bool moveKeyState[4] = {false, false, false, false};
 
+int cameraRotateState = 0;
+
+int cameraZoomState = 0;
+
+float cameraDistance = 800.0f;
+
 /*
 0 normal attack
 1 heavy attack
@@ -147,6 +153,9 @@ void QuitGame(BYTE, BOOL4);
 void Movement(BYTE, BOOL4);
 void Attack(BYTE, BOOL4);
 void Reset(BYTE, BOOL4);
+void cameraRotate(BYTE, BOOL4);
+void cameraZoom(BYTE, BOOL4);
+
 
 // timer callbacks
 void GameAI(int);
@@ -370,6 +379,12 @@ void FyMain(int argc, char **argv)
    FyDefineHotKey(FY_X, Attack, FALSE);
    FyDefineHotKey(FY_F1, Reset, FALSE);
 
+   FyDefineHotKey(FY_A, cameraRotate, FALSE);
+   FyDefineHotKey(FY_S, cameraRotate, FALSE);
+
+   FyDefineHotKey(FY_Q, cameraZoom, FALSE);
+   FyDefineHotKey(FY_W, cameraZoom, FALSE);
+
    // define some mouse functions
    FyBindMouseFunction(LEFT_MOUSE, InitPivot, PivotCam, NULL, NULL);
    FyBindMouseFunction(MIDDLE_MOUSE, InitZoom, ZoomCam, NULL, NULL);
@@ -419,6 +434,54 @@ bool isHit(float *apos, float *bpos, float *afDir, float attackDist, float attac
 inline float turnDegree(float dist, float stepLength)
 {
 	return acos((dist * dist + dist * dist - stepLength * stepLength) / (2 * dist * dist)) * 180.0f / M_PI;
+}
+
+void cameraRotating(){
+	//load the object
+	FnObject object;
+	object.ID(oID);
+
+	float pos[3], opos[3];
+
+	actor.GetPosition(pos);
+	object.GetPosition(opos);
+
+	//right
+	if(cameraRotateState == 1){
+		object.TurnRight(-turnDegree(myDist(pos, opos), 10.0f));
+		object.MoveRight(10.0f);
+	}
+	//left
+	else if(cameraRotateState == 2){
+		object.TurnRight(turnDegree(myDist(pos, opos), 10.0f));
+		object.MoveRight(-10.0f);
+	}
+	else if(cameraRotateState == 0){
+
+	}
+}
+
+void cameraZooming(){
+	//zoom in
+	if(cameraZoomState == 1){
+		if((cameraDistance-10.0f) >= 500.0f){
+			cameraDistance -= 10.0f;
+		}
+		else cameraDistance = 500.0f;
+
+		
+	}
+	//zoom out
+	else if(cameraZoomState == 2){
+		if((cameraDistance+10.0f) <= 800.0f){
+			cameraDistance += 10;
+		}
+		else cameraDistance = 800.0f;
+		
+	}
+	else if(cameraZoomState == 0){
+
+	}
 }
 
 bool moving()
@@ -707,7 +770,7 @@ void GameAI(int skip)
 					normalCombo = false;
 				}
 				else{
-					actor.state = 2;
+					actor.state = 2; 
 					actor.frame = 0;
 					combatWait = 150;
 					actor.SetCurrentAction(NULL, 0, combatIdleID);
@@ -1039,6 +1102,13 @@ void GameAI(int skip)
 			break;
 	}
 
+	
+
+	//camera rotating
+	cameraRotating();
+	cameraZooming();
+
+
 
 // camera hit test	
 	object.GetPosition(opos);
@@ -1148,6 +1218,7 @@ void RenderIt(int skip)
    char posS[256], aposS[256], bposS[256], distS[256];
    char cposS[256], cfDirS[256], cuDirS[256];
    char actorBloodS[256], npcaBloodS[256], npcbBloodS[256];
+   char cameraRotateS[256], cameraDistanceS[256]; 
 
    sprintf(cposS, "cpos: %8.3f %8.3f %8.3f", cpos[0], cpos[1], cpos[2]);
    sprintf(cfDirS, "cfacing: %8.3f %8.3f %8.3f", cfDir[0], cfDir[1], cfDir[2]);
@@ -1159,6 +1230,8 @@ void RenderIt(int skip)
    sprintf(actorBloodS, "Actor HP: %d / %d", actor.blood, actor.fullBlood);
    sprintf(npcaBloodS, "Npc A HP: %d / %d", npca.blood, npca.fullBlood);
    sprintf(npcbBloodS, "Npc B HP: %d / %d", npcb.blood, npcb.fullBlood);
+   sprintf(cameraRotateS, "cameraRotate: %d", cameraRotateState);
+   sprintf(cameraDistanceS, "cameraDistance: %8.3f", cameraDistance);
 
    text.Write(cposS, 20, 35, 255, 255, 0);
    text.Write(cfDirS, 20, 50, 255, 255, 0);
@@ -1170,6 +1243,9 @@ void RenderIt(int skip)
    text.Write(actorBloodS, 20, 140, 255, 255, 0);
    text.Write(npcaBloodS, 20, 155, 255, 255, 0);
    text.Write(npcbBloodS, 20, 170, 255, 255, 0);
+   text.Write(cameraRotateS, 20, 185, 255, 255, 0);
+   text.Write(cameraDistanceS, 20, 200, 255, 255, 0);
+
 
    text.End();
 
@@ -1177,6 +1253,46 @@ void RenderIt(int skip)
    FySwapBuffers();
 }
 
+
+void cameraZoom(BYTE code, BOOL4 value){
+
+	if(value){
+		if(code == FY_Q){
+			cameraZoomState = 1;
+		}
+		else if(code == FY_W){
+			cameraZoomState = 2;
+		}
+		else{
+			cameraZoomState = 0;
+		}
+	}
+	else{
+		cameraZoomState = 0;
+	}
+	
+	
+}
+
+void cameraRotate(BYTE code, BOOL4 value){
+
+	if(value){
+		if(code == FY_A){
+			cameraRotateState = 1;
+		}
+		else if(code == FY_S){
+			cameraRotateState = 2;
+		}
+		else{
+			cameraRotateState = 0;
+		}
+	}
+	else{
+		cameraRotateState = 0;
+	}
+	
+	
+}
 
 /*------------------
   movement control
