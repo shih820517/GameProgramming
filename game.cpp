@@ -52,6 +52,10 @@ public:
 		bloodBarID = bb.Billboard(NULL, size, NULL, 0, color);
 	}
 
+	void Menu(){
+		
+	}
+
 	void BB(){
 		FnBillboard bb(bloodBarID);
 		float newSize[2];
@@ -94,7 +98,9 @@ public:
 
 VIEWPORTid vID;                 // the major viewport
 SCENEid sID;                    // the 3D scene
+SCENEid sID2;
 OBJECTid cID, tID, oID;         // the main camera and the terrain for terrain following
+OBJECTid spID0 = FAILED_ID;
 CHARACTERid actorID, npcaID, npcbID; // the major character
 /* actor actions */
 ACTIONid idleID, runID, dieID, combatIdleID, guardID, curPoseID; // actor move & die
@@ -113,9 +119,9 @@ ACTIONid npcbDamage1ID, npcbDamage2ID; // npcb hurt
 ROOMid terrainRoomID = FAILED_ID;
 TEXTid textID = FAILED_ID;
 
-GEOMETRYid bloodBarID = FAILED_ID;//actorè¡€æ¢?
-GEOMETRYid bloodBarNPC1ID = FAILED_ID;//NPC1è¡€æ¢?
-GEOMETRYid bloodBarNPC2ID = FAILED_ID;//NPC2è¡€æ¢?
+GEOMETRYid bloodBarID = FAILED_ID;//actorÃ¨Â¡?¬Ã¦Â?
+GEOMETRYid bloodBarNPC1ID = FAILED_ID;//NPC1Ã¨Â¡?¬Ã¦Â?
+GEOMETRYid bloodBarNPC2ID = FAILED_ID;//NPC2Ã¨Â¡?¬Ã¦Â?
 
 // some globals
 int frame = 0;
@@ -137,6 +143,8 @@ int cameraZoomState = 0;
 
 float cameraDistance = 800.0f;
 
+bool pause = false;
+
 /*
 0 normal attack
 1 heavy attack
@@ -155,6 +163,8 @@ void Attack(BYTE, BOOL4);
 void Reset(BYTE, BOOL4);
 void cameraRotate(BYTE, BOOL4);
 void cameraZoom(BYTE, BOOL4);
+
+void PauseGame(BYTE, BOOL4);
 
 
 // timer callbacks
@@ -203,6 +213,23 @@ void FyMain(int argc, char **argv)
    sID = FyCreateScene(10);
    FnScene scene;
    scene.ID(sID);
+
+   //create a 2D scene for sprite
+   sID2 = FyCreateScene(1);
+   FnScene spritescene;
+   spritescene.Object(sID2);
+   spritescene.SetSpriteWorldSize(1024, 768);
+
+   //After create scene then create a sprite for user interface
+   FnSprite sp;
+
+   spID0 = spritescene.CreateObject(SPRITE);
+   sp.Object(spID0);
+   sp.SetSize(120, 120);
+   sp.SetImage("test02", 0, NULL, FALSE, NULL, 2, TRUE, FILTER_LINEAR);
+   sp.SetPosition(0, 256, 0);
+   //sp.SetColor();
+
 
    // load the scene
    scene.Load("gameScene01");
@@ -370,7 +397,7 @@ void FyMain(int argc, char **argv)
    textID = FyCreateText("Trebuchet MS", 18, FALSE, FALSE);
 
    // set Hotkeys
-   FyDefineHotKey(FY_ESCAPE, QuitGame, FALSE);  // escape for quiting the game
+  // FyDefineHotKey(FY_ESCAPE, QuitGame, FALSE);  // escape for quiting the game
    FyDefineHotKey(FY_UP, Movement, FALSE);      // Up for moving forward
    FyDefineHotKey(FY_RIGHT, Movement, FALSE);   // Right for turning right
    FyDefineHotKey(FY_LEFT, Movement, FALSE);    // Left for turning left
@@ -389,6 +416,8 @@ void FyMain(int argc, char **argv)
    FyBindMouseFunction(LEFT_MOUSE, InitPivot, PivotCam, NULL, NULL);
    FyBindMouseFunction(MIDDLE_MOUSE, InitZoom, ZoomCam, NULL, NULL);
    FyBindMouseFunction(RIGHT_MOUSE, InitMove, MoveCam, NULL, NULL);
+
+   FyDefineHotKey(FY_ESCAPE, PauseGame, FALSE);
 
    // bind timers, frame rate = 30 fps
    FyBindTimer(0, 30.0f, GameAI, TRUE);
@@ -649,6 +678,8 @@ void GameAI(int skip)
 {
 	FnCamera camera;
 	FnObject object, terrain;
+
+
 
 	bool walk = false;
 	 
@@ -1163,7 +1194,7 @@ void GameAI(int skip)
 	}
 }
 
-/*----------------------
+/*-----------------`-----
   perform the rendering
   C.Wang 0720, 2006
  -----------------------*/
@@ -1174,6 +1205,11 @@ void RenderIt(int skip)
    // render the whole scene
    vp.ID(vID);
    vp.Render3D(cID, TRUE, TRUE);
+
+   if(pause){
+   		vp.RenderSprites(cID, TRUE, TRUE);
+   }
+   
 
    // get camera's data
    FnCamera camera;
@@ -1419,6 +1455,14 @@ void QuitGame(BYTE code, BOOL4 value)
          FyQuitFlyWin32();
       }
    }
+}
+
+void PauseGame(BYTE code, BOOL4 value){
+	if(pause){
+		pause = false;
+	}
+	else pause = true;
+	
 }
 
 
