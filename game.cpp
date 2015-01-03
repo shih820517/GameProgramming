@@ -24,6 +24,7 @@ public:
 		fullBlood = myBlood;
 		frame=0;
 		state = 0;
+		wait = 0;
 		bloodBarID = FAILED_ID;
 	}
 	void setBB(FnScene scene){
@@ -88,6 +89,7 @@ public:
 	int blood, fullBlood;
 	int frame;
 	int state;
+	int wait;
 	GEOMETRYid bloodBarID;
 };
 
@@ -113,10 +115,17 @@ ACTIONid npcbDamage1ID, npcbDamage2ID; // npcb hurt
 ROOMid terrainRoomID = FAILED_ID;
 TEXTid textID = FAILED_ID;
 
-GEOMETRYid bloodBarID = FAILED_ID;//actorè¡€æ¢?
-GEOMETRYid bloodBarNPC1ID = FAILED_ID;//NPC1è¡€æ¢?
-GEOMETRYid bloodBarNPC2ID = FAILED_ID;//NPC2è¡€æ¢?
+GEOMETRYid bloodBarID = FAILED_ID;//actor
+GEOMETRYid bloodBarNPC1ID = FAILED_ID;//npca
+GEOMETRYid bloodBarNPC2ID = FAILED_ID;//npcb
 
+GAMEFX_SYSTEMid gFXID = FAILED_ID;
+GAMEFX_SYSTEMid dFXID = FAILED_ID;
+
+
+AUDIOid mmID;//­I´º­µ¼Ö
+AUDIOid atID;//§ðÀ»­µ¼Ö
+AUDIOid hurtID;//¨ü¶Ë­µ¼Ö
 // some globals
 int frame = 0;
 int oldX, oldY, oldXM, oldYM, oldXMM, oldYMM;
@@ -135,7 +144,8 @@ int cameraRotateState = 0;
 
 int cameraZoomState = 0;
 
-float cameraDistance = 800.0f;
+float cameraDistance = 700.0f;
+
 
 /*
 0 normal attack
@@ -193,6 +203,16 @@ void FyMain(int argc, char **argv)
    FySetModelPath("Data\\NTU5\\Scenes");
    FySetTexturePath("Data\\NTU5\\Scenes\\Textures");
    FySetScenePath("Data\\NTU5\\Scenes");
+   FySetGameFXPath("Data\\NTU5\\GameFXFiles\\FX2");
+
+      
+   //setup the music 
+   FySetAudioPath("Data\\NTU5\\sound");
+   mmID = FyCreateAudio();
+   FnAudio mP;
+   mP.Object(mmID);
+   mP.Load("bk2.wav");
+   mP.Play(LOOP);
 
    // create a viewport
    vID = FyCreateViewport(0, 0, 1024, 768);
@@ -227,7 +247,7 @@ void FyMain(int argc, char **argv)
    FySetCharacterPath("Data\\NTU5\\Characters");
    actorID = scene.LoadCharacter("Lyubu2");
    npcaID = scene.LoadCharacter("Donzo2");
-   npcbID = scene.LoadCharacter("Robber02");
+   npcbID = scene.LoadCharacter("CA005");
 
    // put the character on terrain
    float pos[3], fDir[3], uDir[3];
@@ -308,7 +328,7 @@ void FyMain(int argc, char **argv)
    beOK = npcb.PutOnTerrain(pos);
 
    // Get npcb actions Robber02
-   npcbCombatIdleID = npcb.GetBodyAction(NULL, "CombatIdle");
+/*   npcbCombatIdleID = npcb.GetBodyAction(NULL, "CombatIdle");
    npcbRunID = npcb.GetBodyAction(NULL, "Run");
    npcbMoveRightID = npcb.GetBodyAction(NULL, "MoveRight");
    npcbMoveLeftID = npcb.GetBodyAction(NULL, "MoveLeft");
@@ -316,6 +336,18 @@ void FyMain(int argc, char **argv)
    npcbNormalAttack2ID = npcb.GetBodyAction(NULL, "NormalAttack2");
    npcbHeavyAttack1ID = npcb.GetBodyAction(NULL, "HeavyAttack1");
    npcbDamage1ID = npcb.GetBodyAction(NULL, "Damage1");
+   npcbDamage2ID = npcb.GetBodyAction(NULL, "Damage2");
+   npcbDieID = npcb.GetBodyAction(NULL, "Die");
+   */
+      // Get npcb actions CA005
+   npcbCombatIdleID = npcb.GetBodyAction(NULL, "Idle");
+   npcbRunID = npcb.GetBodyAction(NULL, "Run");
+   //npcbMoveRightID = npcb.GetBodyAction(NULL, "MoveRight");
+   //npcbMoveLeftID = npcb.GetBodyAction(NULL, "MoveLeft");
+   npcbNormalAttack1ID = npcb.GetBodyAction(NULL, "Attack");
+   npcbNormalAttack2ID = npcb.GetBodyAction(NULL, "Skill");
+   npcbHeavyAttack1ID = npcb.GetBodyAction(NULL, "Attack");
+   npcbDamage1ID = npcb.GetBodyAction(NULL, "Skill");
    npcbDamage2ID = npcb.GetBodyAction(NULL, "Damage2");
    npcbDieID = npcb.GetBodyAction(NULL, "Die");
 
@@ -378,13 +410,11 @@ void FyMain(int argc, char **argv)
    FyDefineHotKey(FY_Z, Attack, FALSE);
    FyDefineHotKey(FY_X, Attack, FALSE);
    FyDefineHotKey(FY_F1, Reset, FALSE);
-
-   FyDefineHotKey(FY_A, cameraRotate, FALSE);
-   FyDefineHotKey(FY_S, cameraRotate, FALSE);
+   FyDefineHotKey(FY_1, cameraRotate, FALSE);
+   FyDefineHotKey(FY_2, cameraRotate, FALSE);
 
    FyDefineHotKey(FY_Q, cameraZoom, FALSE);
    FyDefineHotKey(FY_W, cameraZoom, FALSE);
-
    // define some mouse functions
    FyBindMouseFunction(LEFT_MOUSE, InitPivot, PivotCam, NULL, NULL);
    FyBindMouseFunction(MIDDLE_MOUSE, InitZoom, ZoomCam, NULL, NULL);
@@ -473,16 +503,17 @@ void cameraZooming(){
 	}
 	//zoom out
 	else if(cameraZoomState == 2){
-		if((cameraDistance+10.0f) <= 800.0f){
+		if((cameraDistance+10.0f) <= 700.0f){
 			cameraDistance += 10;
 		}
-		else cameraDistance = 800.0f;
+		else cameraDistance = 700.0f;
 		
 	}
 	else if(cameraZoomState == 0){
 
 	}
 }
+
 
 bool moving()
 {
@@ -649,12 +680,20 @@ void GameAI(int skip)
 {
 	FnCamera camera;
 	FnObject object, terrain;
+	atID = FyCreateAudio();
+	FnAudio aP;
+	aP.Object(atID);
+
+	hurtID = FyCreateAudio();
+	FnAudio hP;
+	hP.Object(hurtID);
 
 	bool walk = false;
 	 
 	float pos[3], fDir[3], uDir[3], ohitdir[3];
 	float opos[3], cfDir[3], cuDir[3];
 	float apos[3], bpos[3];
+	float afDir[3], auDir[3], bfDir[3], buDir[3];
 
     ohitdir[0] = 0.0f; ohitdir[1] = 0.0f; ohitdir[2] = -1.0f;
 
@@ -662,21 +701,127 @@ void GameAI(int skip)
 	camera.ID(cID);
 	terrain.ID(tID);
 
+	npca.BB();
+	npcb.BB();
+	actor.BB();
+
+	 FnGameFXSystem gxS(gFXID);//¥D¨¤
+	 FnGameFXSystem dxS(dFXID); //Don
+
+	// check if running
+	if (actor.state != 1 && !movementKeyLocked && (moveKeyState[0] || moveKeyState[1] || moveKeyState[2] || moveKeyState[3]))
+	{
+		actor.state = 1;
+		actor.SetCurrentAction(NULL, 0, runID);
+		//FnGameFXSystem gxS(gFXID);
+		//gxS.SetParentObjectForAll(baseID);
+
+	}
+
+	if(!attackKeyLocked){
+		if(attackKeyState[1]){
+			switch(actor.state){
+				case 3:
+					heavyCombo = true;
+					attackKeyLocked = true;
+					break;
+				case 4:
+					heavyCombo = true;
+					attackKeyLocked = true;
+					break;
+				case 5:
+					heavyCombo = true;
+					attackKeyLocked = true;
+					break;
+				case 6:
+					heavyCombo = true;
+					attackKeyLocked = true;
+				default:
+					break;
+			}
+		}
+	}
+
+	if(!attackKeyLocked){
+		if(attackKeyState[0]){
+			switch(actor.state){
+				case 3:
+					normalCombo = true;
+					attackKeyLocked = true;
+					break;
+				case 4:
+					normalCombo = true;
+					attackKeyLocked = true;
+					break;
+				case 5:
+					normalCombo = true;
+					attackKeyLocked = true;
+					break;
+				case 6:
+					break;
+				default:
+					actor.state = 3;
+					actor.frame = 0;
+					actor.SetCurrentAction(NULL, 0, normalAttack1ID);
+					attackKeyLocked = true;
+					movementKeyLocked = true;
+
+					FnScene scene(sID);
+					gFXID = scene.CreateGameFXSystem();
+					OBJECTid baseID = actor.GetBaseObject();
+					FnGameFXSystem gxS(gFXID);
+					BOOL4 beOK = gxS.Load("Lyubu_skill01", TRUE);
+					gxS.SetParentObjectForAll(baseID);
+					
+					
+					aP.Load("att1.wav");
+					aP.Play(ONCE);
+
+					break;
+			}
+		}
+	}
+
+		// play game FX
+		   if (gFXID != FAILED_ID) {
+			  FnGameFXSystem gxS(gFXID);
+			  BOOL4 beOK = gxS.Play((float) skip, ONCE);
+			  if (!beOK) {
+				 FnScene scene(sID);
+				 scene.DeleteGameFXSystem(gFXID);
+				 gFXID = FAILED_ID;
+			  }
+		   }
+
+				// play game FX
+		   if (dFXID != FAILED_ID) {
+			  FnGameFXSystem dxS(dFXID);
+			  BOOL4 beOK = dxS.Play((float) skip, ONCE);
+			  if (!beOK) {
+				 FnScene scene(sID);
+				 scene.DeleteGameFXSystem(dFXID);
+				 dFXID = FAILED_ID;
+			  }
+		   }
+
 	actor.GetPosition(pos);
 	npca.GetPosition(apos);
 	npcb.GetPosition(bpos);
 
 	actor.GetDirection(fDir, uDir);
+	npca.GetDirection(afDir, auDir);
+	npcb.GetDirection(bfDir, buDir);
 
-	npca.BB();
-	npcb.BB();
-	actor.BB();
-
-	// check if running
-	if (actor.state != 1 && movementKeyLocked == false && (moveKeyState[0] || moveKeyState[1] || moveKeyState[2] || moveKeyState[3]))
+	if (actor.blood <= 0 && actor.state != 15)
 	{
-		actor.state = 1;
-		actor.SetCurrentAction(NULL, 0, runID);
+		actor.state = 15;
+		actor.SetCurrentAction(NULL, 0, dieID);
+		
+	//	gxS.Load("LyuDie", TRUE);
+	//	gxS.Play(skip, ONCE);
+		
+		attackKeyLocked = true;
+		movementKeyLocked = true;
 	}
 
 /*
@@ -735,18 +880,24 @@ void GameAI(int skip)
 			actor.Play(ONCE, (float) skip, FALSE, TRUE);
 			actor.frame++;
 
-			if (actor.frame == 10){
-				if(hitcheck(apos, pos,fDir)){
+
+
+
+			if (actor.frame == 5){
+
+				if(isHit(pos, apos, fDir, 180.0f, 40.0f)){
 					//actorHP=actorHP-1;
 					if (npca.state != 9)
-					{
+					{	
+						
 						npca.blood-=5;
 						npca.state = 7;
 						npca.SetCurrentAction(NULL, 0, npcaDamageLID);
+			
 						npca.frame = 0;
 					}		
 				}
-				if(hitcheck(bpos, pos,fDir)){
+				if(isHit(pos, bpos, fDir, 180.0f, 40.0f)){
 					//actorHP=actorHP-1;
 					if (npcb.state != 9)
 					{
@@ -768,9 +919,32 @@ void GameAI(int skip)
 					actor.frame = 0;
 					actor.SetCurrentAction(NULL, 0, normalAttack2ID);
 					normalCombo = false;
+					
+															
+					aP.Load("att3.wav");
+					aP.Play(ONCE);
+				}
+				else if (heavyCombo)
+				{
+					actor.state = 7;
+					actor.frame = 0;
+					actor.SetCurrentAction(NULL, 0, heavyAttack1ID);
+					
+					FnScene scene(sID);
+					gFXID = scene.CreateGameFXSystem();
+					OBJECTid baseID = actor.GetBaseObject();
+					FnGameFXSystem gxS(gFXID);
+					BOOL beOK = gxS.Load("Lyubu_skill02n", TRUE);
+					gxS.SetParentObjectForAll(baseID);
+
+
+
+					aP.Load("att1.wav");
+					aP.Play(ONCE);
+					heavyCombo = false;
 				}
 				else{
-					actor.state = 2; 
+					actor.state = 2;
 					actor.frame = 0;
 					combatWait = 150;
 					actor.SetCurrentAction(NULL, 0, combatIdleID);
@@ -782,19 +956,27 @@ void GameAI(int skip)
 		// normal attack 2 48 frames
 			actor.Play(ONCE, (float) skip, FALSE, TRUE);
 			actor.frame++;
-
-			if (actor.frame == 28){
-				if(hitcheck(apos, pos,fDir)){
+			if (actor.frame == 3){
+					FnScene scene(sID);
+					gFXID = scene.CreateGameFXSystem();
+					OBJECTid baseID = actor.GetBaseObject();
+					FnGameFXSystem gxS(gFXID);
+					BOOL beOK = gxS.Load("Lyuatt3", TRUE);
+					gxS.SetParentObjectForAll(baseID);
+			}
+			if (actor.frame == 23){
+				if(isHit(pos, apos, fDir, 180.0f, 360.0f)){
 					//actorHP=actorHP-1;
 					if (npca.state != 9)
 					{
 						npca.blood-= 10;
 						npca.state = 7;
 						npca.SetCurrentAction(NULL, 0, npcaDamageLID);
+				
 						npca.frame = 0;
 					}	
 				}
-				if(hitcheck(bpos, pos,fDir)){
+				if(isHit(pos, bpos, fDir, 180.0f, 360.0f)){
 					//actorHP=actorHP-1;
 					if (npcb.state != 9)
 					{
@@ -815,7 +997,31 @@ void GameAI(int skip)
 					actor.state = 5;
 					actor.frame = 0;
 					actor.SetCurrentAction(NULL, 0, normalAttack3ID);
-					normalCombo = false;
+
+					/*FnScene scene(sID);
+					gFXID = scene.CreateGameFXSystem();
+					OBJECTid baseID = actor.GetBaseObject();
+					FnGameFXSystem gxS(gFXID);
+					BOOL beOK = gxS.Load("Swin", TRUE);
+					gxS.Play(skip,ONCE);
+					gxS.SetParentObjectForAll(baseID);
+					*/normalCombo = false;
+				}
+				else if (heavyCombo)
+				{
+					actor.state = 8;
+					actor.frame = 0;
+					actor.SetCurrentAction(NULL, 0, heavyAttack2ID);
+					/*FnScene scene(sID);
+					gFXID = scene.CreateGameFXSystem();
+					OBJECTid baseID = actor.GetBaseObject();
+					FnGameFXSystem gxS(gFXID);
+					BOOL beOK = gxS.Load("Swin", TRUE);
+					
+					gxS.SetParentObjectForAll(baseID);
+					*/aP.Load("att2.wav");
+					aP.Play(ONCE);
+					heavyCombo = false;
 				}
 				else{
 					actor.state = 2;
@@ -830,19 +1036,29 @@ void GameAI(int skip)
 		// normal attack 3 46 frames
 			actor.Play(ONCE, (float) skip, FALSE, TRUE);
 			actor.frame++;
-
-			if (actor.frame == 28){
-				if(hitcheck(apos, pos,fDir)){
+			if (actor.frame == 15){
+				FnScene scene(sID);
+					gFXID = scene.CreateGameFXSystem();
+					OBJECTid baseID = actor.GetBaseObject();
+					FnGameFXSystem gxS(gFXID);
+					BOOL beOK = gxS.Load("Lyuatt2", TRUE);
+					gxS.SetParentObjectForAll(baseID);
+				aP.Load("att4.wav");
+				aP.Play(ONCE);
+			}
+			if (actor.frame == 25){
+				if(isHit(pos, apos, fDir, 180.0f, 180.0f)){
 					//actorHP=actorHP-1;
 					if (npca.state != 9)
 					{
 						npca.blood-=20;
 						npca.state = 7;
 						npca.SetCurrentAction(NULL, 0, npcaDamageLID);
+			
 						npca.frame = 0;
 					}	
 				}
-				if(hitcheck(bpos, pos,fDir)){
+				if(isHit(pos, bpos, fDir, 180.0f, 180.0f)){
 					//actorHP=actorHP-1;
 					if (npcb.state != 9)
 					{
@@ -863,7 +1079,31 @@ void GameAI(int skip)
 					actor.state = 6;
 					actor.frame = 0;
 					actor.SetCurrentAction(NULL, 0, normalAttack4ID);
-					normalCombo = false;
+					aP.Load("att1.wav");
+					aP.Play(ONCE);
+					/*FnScene scene(sID);
+					gFXID = scene.CreateGameFXSystem();
+					OBJECTid baseID = actor.GetBaseObject();
+					FnGameFXSystem gxS(gFXID);
+					BOOL beOK = gxS.Load("Swin", TRUE);
+					gxS.Play(skip,ONCE);
+					gxS.SetParentObjectForAll(baseID);
+					*/normalCombo = false;
+				}
+				else if (heavyCombo)
+				{
+					actor.state = 9;
+					actor.frame = 0;
+					actor.SetCurrentAction(NULL, 0, heavyAttack3ID);
+
+					/*FnScene scene(sID);
+					gFXID = scene.CreateGameFXSystem();
+					OBJECTid baseID = actor.GetBaseObject();
+					FnGameFXSystem gxS(gFXID);
+					BOOL beOK = gxS.Load("Swin", TRUE);
+					gxS.Play(skip,ONCE);
+					gxS.SetParentObjectForAll(baseID);
+					*/heavyCombo = false;
 				}
 				else{
 					actor.state = 2;
@@ -878,19 +1118,29 @@ void GameAI(int skip)
 		// normal attack 4 49 frames
 			actor.Play(ONCE, (float) skip, FALSE, TRUE);
 			actor.frame++;
+			if (actor.frame == 2){
+				FnScene scene(sID);
+				gFXID = scene.CreateGameFXSystem();
+				OBJECTid baseID = actor.GetBaseObject();
+				FnGameFXSystem gxS(gFXID);
+				BOOL4 beOK = gxS.Load("Lyuatt3", TRUE);
+				gxS.SetParentObjectForAll(baseID);
+			}
 
 			if (actor.frame == 30){
-				if(hitcheck(apos, pos,fDir)){
+				
+				if(isHit(pos, apos, fDir, 180.0f, 40.0f)){
 					//actorHP=actorHP-1;
 					if (npca.state != 9)
 					{
 						npca.blood-=30;
 						npca.state = 7;
 						npca.SetCurrentAction(NULL, 0, npcaDamageHID);
+	
 						npca.frame = 0;
 					}	
 				}
-				if(hitcheck(bpos, pos,fDir)){
+				if(isHit(pos, bpos, fDir, 180.0f, 40.0f)){
 					//actorHP=actorHP-1;
 					if (npcb.state != 9)
 					{
@@ -901,17 +1151,25 @@ void GameAI(int skip)
 					}
 				}
 			}
-			if (actor.frame == 44)
+			if (actor.frame == 38)
 			{
 				attackKeyLocked = false;
 			}
 			if (actor.frame == 48)
 			{
-				if(normalCombo){
-					actor.state = 3;
+				if (heavyCombo)
+				{
+					actor.state = 10;
 					actor.frame = 0;
-					actor.SetCurrentAction(NULL, 0, normalAttack1ID);
-					normalCombo = false;
+					actor.SetCurrentAction(NULL, 0, ultimateAttackID);
+					/*FnScene scene(sID);
+					gFXID = scene.CreateGameFXSystem();
+					OBJECTid baseID = actor.GetBaseObject();
+					FnGameFXSystem gxS(gFXID);
+					BOOL beOK = gxS.Load("utimate", TRUE);
+					gxS.Play(skip,ONCE);
+					gxS.SetParentObjectForAll(baseID);
+					*/heavyCombo = false;
 				}
 				else{
 					actor.state = 2;
@@ -919,26 +1177,198 @@ void GameAI(int skip)
 					combatWait = 150;
 					actor.SetCurrentAction(NULL, 0, combatIdleID);
 					movementKeyLocked = false;
-				}	
+				}		
 			}
 			break;
 		case 7:
 		// heavy attack 1 73 frames
+			actor.Play(ONCE, (float) skip, FALSE, TRUE);
+			actor.frame++;
+
+			if (actor.frame == 10){
+				if(hitcheck(apos, pos,fDir)){
+					//actorHP=actorHP-1;
+					if (npca.state != 9)
+					{
+						npca.blood-=5;
+						npca.state = 7;
+						npca.SetCurrentAction(NULL, 0, npcaDamageLID);
+
+						npca.frame = 0;
+					}		
+				}
+				if(hitcheck(bpos, pos,fDir)){
+					//actorHP=actorHP-1;
+					if (npcb.state != 9)
+					{
+						npcb.blood-= 5;
+						npcb.state = 7;
+						npcb.SetCurrentAction(NULL, 0, npcbDamage1ID);
+						npcb.frame = 0;
+					}
+				}	
+			}
+			if (actor.frame == 72)
+			{
+				actor.state = 2;
+				actor.frame = 0;
+				combatWait = 150;
+				actor.SetCurrentAction(NULL, 0, combatIdleID);
+				movementKeyLocked = false;
+				attackKeyLocked = false;
+			}
 			break;
 		case 8:
 		// heavy attack 2 59 frames
+			actor.Play(ONCE, (float) skip, FALSE, TRUE);
+			actor.frame++;
+
+			if (actor.frame == 10){
+				if(hitcheck(apos, pos,fDir)){
+					//actorHP=actorHP-1;
+					if (npca.state != 9)
+					{
+						npca.blood-=5;
+						npca.state = 7;
+						npca.SetCurrentAction(NULL, 0, npcaDamageLID);
+
+						npca.frame = 0;
+					}		
+				}
+				if(hitcheck(bpos, pos,fDir)){
+					//actorHP=actorHP-1;
+					if (npcb.state != 9)
+					{
+						npcb.blood-= 5;
+						npcb.state = 7;
+						npcb.SetCurrentAction(NULL, 0, npcbDamage1ID);
+						npcb.frame = 0;
+					}
+				}	
+			}
+			if (actor.frame == 58)
+			{
+				actor.state = 2;
+				actor.frame = 0;
+				combatWait = 150;
+				actor.SetCurrentAction(NULL, 0, combatIdleID);
+				movementKeyLocked = false;
+				attackKeyLocked = false;
+			}
 			break;
 		case 9:
 		// heavy attack 3 57 frames
+			actor.Play(ONCE, (float) skip, FALSE, TRUE);
+			actor.frame++;
+
+			if (actor.frame == 10){
+				if(hitcheck(apos, pos,fDir)){
+					//actorHP=actorHP-1;
+					if (npca.state != 9)
+					{
+						npca.blood-=5;
+						npca.state = 7;
+						npca.SetCurrentAction(NULL, 0, npcaDamageLID);
+
+						npca.frame = 0;
+					}		
+				}
+				if(hitcheck(bpos, pos,fDir)){
+					//actorHP=actorHP-1;
+					if (npcb.state != 9)
+					{
+						npcb.blood-= 5;
+						npcb.state = 7;
+						npcb.SetCurrentAction(NULL, 0, npcbDamage1ID);
+						npcb.frame = 0;
+					}
+				}	
+			}
+			if (actor.frame == 56)
+			{
+				actor.state = 2;
+				actor.frame = 0;
+				combatWait = 150;
+				actor.SetCurrentAction(NULL, 0, combatIdleID);
+				movementKeyLocked = false;
+				attackKeyLocked = false;	
+			}
 			break;
 		case 10:
 		// ultimate attack 121 frames
+		actor.Play(ONCE, (float) skip, FALSE, TRUE);
+			actor.frame++;
+
+			if (actor.frame == 10){
+				if(hitcheck(apos, pos,fDir)){
+					//actorHP=actorHP-1;
+					if (npca.state != 9)
+					{
+						npca.blood-=5;
+						npca.state = 7;
+						npca.SetCurrentAction(NULL, 0, npcaDamageLID);
+
+						npca.frame = 0;
+					}		
+				}
+				if(hitcheck(bpos, pos,fDir)){
+					//actorHP=actorHP-1;
+					if (npcb.state != 9)
+					{
+						npcb.blood-= 5;
+						npcb.state = 7;
+						npcb.SetCurrentAction(NULL, 0, npcbDamage1ID);
+						npcb.frame = 0;
+					}
+				}	
+			}
+			if (actor.frame == 120)
+			{
+				actor.state = 2;
+				actor.frame = 0;
+				combatWait = 150;
+				actor.SetCurrentAction(NULL, 0, combatIdleID);
+				movementKeyLocked = false;
+				attackKeyLocked = false;
+			}
 			break;
 		case 11:
 		// guard 34 frames
 			break;
 		case 12:
 		// heavy damage 24 frames
+			actor.frame++;
+			actor.Play(ONCE, (float) skip, FALSE, TRUE);
+			if (actor.frame == 2)
+			{	FnScene scene(sID);
+					gFXID = scene.CreateGameFXSystem();
+					OBJECTid baseID = actor.GetBaseObject();
+					FnGameFXSystem gxS(gFXID);
+					BOOL beOK = gxS.Load("SpellHome_02", TRUE);
+					gxS.SetParentObjectForAll(baseID);
+				aP.Load("hurt2.wav");
+				aP.Play(ONCE);
+			}
+			if (actor.frame == 20)
+			{
+				attackKeyLocked = false;
+				movementKeyLocked = false;
+			}
+			if (actor.frame == 23)
+			{
+				actor.state = 0;
+				actor.SetCurrentAction(NULL, 0, combatIdleID);
+				/*FnScene scene(sID);
+				gFXID = scene.CreateGameFXSystem();
+				OBJECTid baseID = actor.GetBaseObject();
+				FnGameFXSystem gxS(gFXID);
+				BOOL beOK = gxS.Load("Tower_atk01_e", TRUE);
+				gxS.Play(skip,ONCE);
+				gxS.SetParentObjectForAll(baseID);
+				*/
+				actor.frame = 0;
+			}
+			break;
 			break;
 		case 13:
 		// right damage 24 frames
@@ -954,17 +1384,52 @@ void GameAI(int skip)
 			break;
 	}
 	
+	
+	// play game FX
+		   if (gFXID != FAILED_ID) {
+			  FnGameFXSystem gxS(gFXID);
+			  BOOL4 beOK = gxS.Play((float) skip, ONCE);
+			  if (!beOK) {
+				 FnScene scene(sID);
+				 scene.DeleteGameFXSystem(gFXID);
+				 gFXID = FAILED_ID;
+			  }
+		   }
+
+					// play game FX
+		   if (dFXID != FAILED_ID) {
+			  FnGameFXSystem dxS(dFXID);
+			  BOOL4 beOK = dxS.Play((float) skip, ONCE);
+			  if (!beOK) {
+				 FnScene scene(sID);
+				 scene.DeleteGameFXSystem(dFXID);
+				 dFXID = FAILED_ID;
+			  }
+		   }
+
+
 	// check npc die 
 	if (npca.blood <= 0 && npca.state != 9)
 	{
 		npca.state = 9;
 		npca.SetCurrentAction(NULL, 0, npcaDieID);
+		
+		
+			
 	}
 	if (npcb.blood <= 0 && npcb.state != 9)
 	{
 		npcb.state = 9;
 		npcb.SetCurrentAction(NULL, 0, npcbDieID);
 	}
+
+	actor.GetPosition(pos);
+	npca.GetPosition(apos);
+	npcb.GetPosition(bpos);
+
+	actor.GetDirection(fDir, uDir);
+	npca.GetDirection(afDir, auDir);
+	npcb.GetDirection(bfDir, buDir);
 
 /*
 	npca.state:
@@ -983,13 +1448,67 @@ void GameAI(int skip)
 		case 0:
 		// idle
 			npca.Play(LOOP, (float) skip, FALSE, TRUE);
+			if (myDist(pos, apos) <= 1000.0f && myDist(pos, apos) >= 100.0f)
+			{
+				npca.state = 1;
+				npca.SetCurrentAction(NULL, 0, npcaRunID);
+			}
+			else if (myDist(pos, apos) < 100.0f  && actor.state != 15)
+			{
+				npca.wait++;
+				afDir[0] = pos[0] - apos[0];
+				afDir[1] = pos[1] - apos[1];
+				npca.SetDirection(afDir, auDir);
+				if (npca.wait == 50)
+				{
+					npca.state = 2;
+					npca.SetCurrentAction(NULL, 0, npcaAttackL1ID);
+					
+					npca.wait = 0;
+					npca.frame = 0;
+				}
+			}
 			break;
 		case 1:
 		// run
 			npca.Play(LOOP, (float) skip, FALSE, TRUE);
+			afDir[0] = pos[0] - apos[0];
+			afDir[1] = pos[1] - apos[1];
+			npca.SetDirection(afDir, auDir);
+			npca.MoveForward(5.0f, TRUE, FALSE, FALSE, TRUE);
+			if (myDist(pos, apos) < 90.0f)
+			{
+				npca.state = 0;
+				npca.SetCurrentAction(NULL, 0, npcaIdleID);
+			}
 			break;
 		case 2:
 		// attackL 1 36 frames
+			npca.Play(ONCE, (float) skip, FALSE, TRUE);
+			npca.frame++;
+
+			if (npca.frame == 12){
+				hP.Load("att3.wav");
+				hP.Play(ONCE);
+				if(isHit(apos, pos, afDir, 120.0f, 40.0f)){
+					//actorHP=actorHP-1;
+					if (actor.state != 15)
+					{
+						actor.blood -= 30;
+						actor.state = 12;
+						actor.SetCurrentAction(NULL, 0, heavyDamagedID);
+						actor.frame = 0;
+						attackKeyLocked = true;
+						movementKeyLocked = true;
+					}		
+				}	
+			}
+			if (npca.frame == 35)
+			{
+				npca.state = 0;
+				npca.frame = 0;
+				npca.SetCurrentAction(NULL, 0, npcaIdleID);	
+			}
 			break;
 		case 3:
 		// attackL 2 41 frames
@@ -1007,8 +1526,19 @@ void GameAI(int skip)
 		// damage L 26
 			npca.frame++;
 			npca.Play(ONCE, (float) skip, FALSE, TRUE);
+			if(npca.frame == 1){
+				hP.Load("Dhurt1.wav");
+				hP.Play(ONCE);
+				FnScene scene(sID);
+				dFXID = scene.CreateGameFXSystem();
+				OBJECTid baseID = npca.GetBaseObject();
+				FnGameFXSystem dxS(dFXID);
+				BOOL4 beOK = dxS.Load("DonzuHurt", TRUE);
+				dxS.SetParentObjectForAll(baseID);
+				
+			}
 			if (npca.frame == 25)
-			{
+			{	
 				npca.state = 0;
 				npca.SetCurrentAction(NULL, 0, npcaIdleID);
 				npca.frame = 0;
@@ -1027,12 +1557,21 @@ void GameAI(int skip)
 			break;
 		case 9:
 		// die
+			npca.frame++;
 			npca.Play(ONCE, (float) skip, FALSE, TRUE);
+			
+			if (npca.frame == 90)
+			{	
+				hP.Load("Ddie.wav");
+				hP.Play(ONCE);
+			}		
 			break;
 		default:
 			break;
 	}
 	
+
+
 /*
 	npcb.state:
 		0 combatIdle
@@ -1102,12 +1641,46 @@ void GameAI(int skip)
 			break;
 	}
 
-	
 
+	// play game FX
+		   if (gFXID != FAILED_ID) {
+			  FnGameFXSystem gxS(gFXID);
+			  BOOL4 beOK = gxS.Play((float) skip, ONCE);
+			  if (!beOK) {
+				 FnScene scene(sID);
+				 scene.DeleteGameFXSystem(gFXID);
+				 gFXID = FAILED_ID;
+			  }
+		   }
+
+					// play game FX
+		   if (dFXID != FAILED_ID) {
+			  FnGameFXSystem dxS(dFXID);
+			  BOOL4 beOK = dxS.Play((float) skip, ONCE);
+			  if (!beOK) {
+				 FnScene scene(sID);
+				 scene.DeleteGameFXSystem(dFXID);
+				 dFXID = FAILED_ID;
+			  }
+		   }
+
+	/*
+		// play game FX
+		   if (gFXID != FAILED_ID) {
+			  FnGameFXSystem dxS(gFXID);
+			  BOOL4 beOK = dxS.Play((float) skip, ONCE);
+			  if (!beOK) {
+				 FnScene scene(sID);
+				 scene.DeleteGameFXSystem(gFXID);
+				 gFXID = FAILED_ID;
+			  }
+		   }
+*/
+
+	
 	//camera rotating
 	cameraRotating();
 	cameraZooming();
-
 
 
 // camera hit test	
@@ -1120,13 +1693,13 @@ void GameAI(int skip)
 	if(terrain.HitTest(opos, ohitdir) > 0)
 	{
 		if(walk){
-			if(d_oa < 800.0f)
+			if(d_oa < 700.0f)
 			{
 				object.MoveForward(-10.0f);
 				object.GetPosition(opos);
 				d_oa = myDist(opos, pos);
-				if(d_oa > 800.0f){
-					opos[2] = cameraHieght(800.0f);
+				if(d_oa > 700.0f){
+					opos[2] = cameraHieght(700.0f);
 					opos[0] = pos[0] - sqrt(640000.0f / (1 + (cfDir[1] * cfDir[1]) / (cfDir[0] * cfDir[0]))) * cfDir[0] / fabs(cfDir[0]);
 					opos[1] = pos[1] - sqrt(640000.0f / (1 + (cfDir[0] * cfDir[0]) / (cfDir[1] * cfDir[1]))) * cfDir[1] / fabs(cfDir[1]);
 					object.SetPosition(opos);
@@ -1218,6 +1791,7 @@ void RenderIt(int skip)
    char posS[256], aposS[256], bposS[256], distS[256];
    char cposS[256], cfDirS[256], cuDirS[256];
    char actorBloodS[256], npcaBloodS[256], npcbBloodS[256];
+   char frameS[256];   
    char cameraRotateS[256], cameraDistanceS[256]; 
 
    sprintf(cposS, "cpos: %8.3f %8.3f %8.3f", cpos[0], cpos[1], cpos[2]);
@@ -1230,8 +1804,10 @@ void RenderIt(int skip)
    sprintf(actorBloodS, "Actor HP: %d / %d", actor.blood, actor.fullBlood);
    sprintf(npcaBloodS, "Npc A HP: %d / %d", npca.blood, npca.fullBlood);
    sprintf(npcbBloodS, "Npc B HP: %d / %d", npcb.blood, npcb.fullBlood);
+   sprintf(frameS, "actor frame: %d", actor.frame);
    sprintf(cameraRotateS, "cameraRotate: %d", cameraRotateState);
    sprintf(cameraDistanceS, "cameraDistance: %8.3f", cameraDistance);
+
 
    text.Write(cposS, 20, 35, 255, 255, 0);
    text.Write(cfDirS, 20, 50, 255, 255, 0);
@@ -1240,12 +1816,12 @@ void RenderIt(int skip)
    text.Write(posS, 20, 110, 255, 255, 0);
    text.Write(aposS, 20, 125, 255, 255, 0);
    text.Write(bposS, 20, 140, 255, 255, 0);
-   text.Write(actorBloodS, 20, 140, 255, 255, 0);
-   text.Write(npcaBloodS, 20, 155, 255, 255, 0);
-   text.Write(npcbBloodS, 20, 170, 255, 255, 0);
+   text.Write(actorBloodS, 20, 155, 255, 255, 0);
+   text.Write(npcaBloodS, 20, 170, 255, 255, 0);
+   text.Write(npcbBloodS, 20, 185, 255, 255, 0);
+   text.Write(frameS, 20, 200, 255, 255, 0);
    text.Write(cameraRotateS, 20, 185, 255, 255, 0);
    text.Write(cameraDistanceS, 20, 200, 255, 255, 0);
-
 
    text.End();
 
@@ -1277,10 +1853,10 @@ void cameraZoom(BYTE code, BOOL4 value){
 void cameraRotate(BYTE code, BOOL4 value){
 
 	if(value){
-		if(code == FY_A){
+		if(code == FY_1){
 			cameraRotateState = 1;
 		}
-		else if(code == FY_S){
+		else if(code == FY_2){
 			cameraRotateState = 2;
 		}
 		else{
@@ -1293,6 +1869,9 @@ void cameraRotate(BYTE code, BOOL4 value){
 	
 	
 }
+
+
+
 
 /*------------------
   movement control
@@ -1342,35 +1921,6 @@ void Movement(BYTE code, BOOL4 value)
 
 void Attack(BYTE code, BOOL4 value)
 {
-	if(!attackKeyLocked){
-		if(value){
-			switch(actor.state){
-				case 3:
-					normalCombo = true;
-					attackKeyLocked = true;
-					break;
-				case 4:
-					normalCombo = true;
-					attackKeyLocked = true;
-					break;
-				case 5:
-					normalCombo = true;
-					attackKeyLocked = true;
-					break;
-				default:
-					actor.state = 3;
-					actor.frame = 0;
-					actor.SetCurrentAction(NULL, 0, normalAttack1ID);
-					attackKeyLocked = true;
-					movementKeyLocked = true;
-					break;
-			}
-		}
-	}
-}
-
-void Attack1(BYTE code, BOOL4 value)
-{
 	if (value)
 	{
 		if (code == FY_X)
@@ -1399,12 +1949,17 @@ void Reset(BYTE code, BOOL4 value)
 {
 	if (value)
 	{
+		actor.blood = actor.fullBlood;
 		npca.blood = npca.fullBlood;
 		npcb.blood = npcb.fullBlood;
+		actor.state = 0;
 		npca.state = 0;
 		npcb.state = 0;
+		actor.SetCurrentAction(NULL, 0, idleID);
 		npca.SetCurrentAction(NULL, 0, npcaIdleID);
 		npcb.SetCurrentAction(NULL, 0, npcbCombatIdleID);
+		attackKeyLocked = false;
+		movementKeyLocked = false;
 	}
 }
 
