@@ -1107,7 +1107,6 @@ void GameAI(int skip)
 		// 還回callback
 		FyDefineHotKey(FY_UP, Movement, FALSE);      // Up for moving forward
 		FyDefineHotKey(FY_DOWN, Movement, FALSE);    // Down for moving back
-		FyDefineHotKey(FY_RETURN, PauseAction, FALSE); // Pause enters
 
 		FnCamera camera;
 		FnObject object, terrain;
@@ -8563,6 +8562,12 @@ void GameAI(int skip)
 		FyDefineHotKey(FY_UP, selectMenu1, FALSE);
 		FyDefineHotKey(FY_DOWN, selectMenu2, FALSE);
 		FyDefineHotKey(FY_RETURN, enterMenu, FALSE);
+	}
+	if(pause){
+		FyDefineHotKey(FY_UP, Movement, FALSE);
+		FyDefineHotKey(FY_DOWN, Movement, FALSE);
+		FyDefineHotKey(FY_RETURN, PauseAction, FALSE);
+
 	}
 }
 
