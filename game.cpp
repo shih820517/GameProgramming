@@ -1088,7 +1088,6 @@ void GameAI(int skip)
 		// 還回callback
 		FyDefineHotKey(FY_UP, Movement, FALSE);      // Up for moving forward
 		FyDefineHotKey(FY_DOWN, Movement, FALSE);    // Down for moving back
-		FyDefineHotKey(FY_RETURN, PauseAction, FALSE); // Pause enters
 
 		FnCamera camera;
 		FnObject object, terrain;
@@ -8545,6 +8544,12 @@ void GameAI(int skip)
 		FyDefineHotKey(FY_DOWN, selectMenu2, FALSE);
 		FyDefineHotKey(FY_RETURN, enterMenu, FALSE);
 	}
+	if(pause){
+		FyDefineHotKey(FY_UP, Movement, FALSE);
+		FyDefineHotKey(FY_DOWN, Movement, FALSE);
+		FyDefineHotKey(FY_RETURN, PauseAction, FALSE);
+
+	}
 }
 
 void RenderIt(int skip)
@@ -8563,6 +8568,8 @@ void RenderIt(int skip)
    	if(pause){
    		vp.RenderSprites(sID2, TRUE, TRUE);
    	}
+  
+
 
 	// get camera's data
 	FnCamera camera;
@@ -8876,8 +8883,7 @@ void PauseAction(BYTE code, BOOL4 value){
 						pause = false;
 						break;
 					case 2:
-						pause = false;
-						welcome = true;
+
 						break;
 					case 3:
 						//toggle the enmusic
@@ -8919,14 +8925,19 @@ void PauseGame(BYTE code, BOOL4 value){
 
 		
 		if(pause) {
-			mP.Play(LOOP);
+			if(bkmusic){
+				mP.Play(LOOP);
 
+			}
 			menuP.Stop();
+			
 			pause = false;
 		}
 		else{
-			mP.Pause();
-			menuP.Play(LOOP);
+			if(bkmusic){
+				mP.Pause();
+				menuP.Play(LOOP);
+			}	
 			pause = true;
 		}
 	}
