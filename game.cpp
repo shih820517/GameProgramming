@@ -242,6 +242,8 @@ void FyMain(int argc, char **argv)
 	FnViewport vp;
 	vp.ID(vID);
 
+	
+
 	// create a 3D scene
 	sID = FyCreateScene(10);
 	FnScene scene;
@@ -250,17 +252,17 @@ void FyMain(int argc, char **argv)
 	//create a 2D scene for UI
 	sID2 = FyCreateScene(1);
 	FnScene spritescene;
-	spritescene.Object(sID2);
+	spritescene.ID(sID2);
 	spritescene.SetSpriteWorldSize(1024, 768);
 
 	//After create scene then create a sprite for user interface
 	FnSprite sp;
 
 	spID0 = spritescene.CreateObject(SPRITE);
-	sp.Object(spID0);
-	sp.SetSize(1024, 350);
+	sp.ID(spID0);
+	sp.SetSize(200, 200);
 	sp.SetImage("chiou_head", 0, NULL, FALSE, NULL, 2, TRUE, FILTER_LINEAR);
-	sp.SetPosition(0, 256, 0);
+	sp.SetPosition(0, 568, 0);
 
 	// load the scene
 	scene.Load("gameScene01");
@@ -8464,9 +8466,9 @@ void RenderIt(int skip)
 	vp.ID(vID);
 	vp.Render3D(cID, TRUE, TRUE);
 
-	if(pause){
-   		vp.RenderSprites(sID2, TRUE, TRUE);
-   	}
+	//if(pause){
+   		vp.RenderSprites(sID2, FALSE, TRUE);
+   	//}
 
 	// get camera's data
 	FnCamera camera;
