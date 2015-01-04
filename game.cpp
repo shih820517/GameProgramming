@@ -8508,6 +8508,10 @@ void RenderIt(int skip)
 	vp.ID(vID);
 	vp.Render3D(cID, TRUE, TRUE);
 
+	if(welcome){
+   		vp.RenderSprites(sID20, TRUE, TRUE);
+   	}
+
 	if(pause){
    		vp.RenderSprites(sID2, TRUE, TRUE);
    	}
