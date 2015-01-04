@@ -2,27 +2,28 @@
 #define _USE_MATH_DEFINES 
 #include <cmath>
 
-#define IDLE 		0
-#define RUN 		1
-#define COMBATIDLE 	2
-#define ATTACK1 	3
-#define ATTACK2 	4
-#define ATTACK3 	5
-#define ATTACK4 	6
-#define ULT 		7
-#define DAMAGE 		8
-#define DIE 		9
+#define IDLE			0
+#define RUN				1
+#define COMBATIDLE		2
+#define ATTACK1			3
+#define ATTACK2			4
+#define ATTACK3			5
+#define ATTACK4			6
+#define ULT				7
+#define DAMAGE			8
+#define DIE				9
 
 typedef int STATE;
 
-#define ACTOR		0
-#define NPCA 		1
-#define NPCB 		2
-#define NPCC 		3
-#define NPCD 		4
-#define NPCE 		5
-#define NPCF 		6
-#define NPCG 		7
+#define NONE			-1
+#define ACTOR 			0
+#define NPCA 			1
+#define NPCB 			2
+#define NPCC 			3
+#define NPCD 			4
+#define NPCE 			5
+#define NPCF 			6
+#define NPCG 			7
 
 class MyCharacter : public FnCharacter {
 public:
@@ -66,10 +67,12 @@ public:
 		fullBlood = myBlood;
 		frame = 0;
 		state = 0;
-		wait = 0;
+		wait1 = 0;
+      wait2 = 0;
 		isFriend = false;
-		npcControl = 0;
-		target = 0;
+      buff = 1;
+      cold = 0;
+		target = NONE;
 		bloodBarID = FAILED_ID;
 	}
 	void setBB(FnScene scene){
@@ -93,10 +96,10 @@ public:
 	int blood, fullBlood;
 	int frame;
 	STATE state;
-	int wait;
+	int wait1, wait2;
 	bool isFriend;
-	int npcControl;
 	int target;
+   int buff, cold;
 	GEOMETRYid bloodBarID;
 	ACTIONid idleID, runID, dieID;
 	ACTIONid attack1ID, attack2ID; // npc attack
@@ -117,13 +120,8 @@ ACTIONid heavyDamagedID; // actor hurt
 ROOMid terrainRoomID = FAILED_ID;
 TEXTid textID = FAILED_ID;
 
-GEOMETRYid bloodBarID = FAILED_ID;//actor
-GEOMETRYid bloodBarNPC1ID = FAILED_ID;//npca
-GEOMETRYid bloodBarNPC2ID = FAILED_ID;//npcb
-
 GAMEFX_SYSTEMid gFXID = FAILED_ID;
 GAMEFX_SYSTEMid dFXID = FAILED_ID;
-
 
 AUDIOid mmID;//?Œæ™¯?³æ?
 AUDIOid atID;//?»æ??³æ?
@@ -151,7 +149,7 @@ bool attackKeyLocked = false;
 bool movementKeyLocked = false;
 bool normalCombo = false;
 bool isFollow[2] = {true, true};
-int friendID[2] = {ACTOR, ACTOR};
+int teammateID[2] = {NONE, NONE};
 
 int cameraRotateState = 0;
 
@@ -183,9 +181,11 @@ void ZoomCam(int, int);
 // our function
 inline float myDist(float *npcapos, float *npcbpos); //find distance
 inline float cameraHieght(float dist); // give the hieght we need
-inline bool hitcheck(float *a, float *b, float fDir[3]);// check if attack hit
 bool isHit(float *npcapos, float *npcbpos, float *npcafDir, float attackDist, float attackAngle);
 inline float turnDegree(float dist, float stepLength);
+int nearestFriend(int myID, float *mypos);
+int nearestEnemy(int myID, float *mypos);
+bool moving();
 
 MyNpc npca(200);
 MyNpc npcb(200);
@@ -297,11 +297,11 @@ void FyMain(int argc, char **argv)
 	actor.setBB(scene);
 
 	/*------------------------------------------
-	 ||||    || |||||||||   ||||||||  
-	 || ||   || ||      || ||      || 
-	 ||  ||  || |||||||||  ||         a
-	 ||   || || ||         ||      || 
-	 ||    |||| ||          ||||||||  
+	 ||||    || |||||||||   ||||||||     ||||
+	 || ||   || ||      || ||      ||   ||  ||
+	 ||  ||  || |||||||||  ||          ||    ||
+	 ||   || || ||         ||      || ||||||||||
+	 ||    |||| ||          ||||||||  ||      ||
 	 ------------------------------------------*/
 	npcaID = scene.LoadCharacter("Donzo2");
 	npca.ID(npcaID);
@@ -330,11 +330,11 @@ void FyMain(int argc, char **argv)
 	npca.setBB(scene);
 
 	/*------------------------------------------
-	 ||||    || |||||||||   ||||||||  
-	 || ||   || ||      || ||      || 
-	 ||  ||  || |||||||||  ||         b
-	 ||   || || ||         ||      || 
-	 ||    |||| ||          ||||||||  
+	 ||||    || |||||||||   ||||||||  |||||||||
+	 || ||   || ||      || ||      || ||      ||
+	 ||  ||  || |||||||||  ||         |||||||||
+	 ||   || || ||         ||      || ||      ||
+	 ||    |||| ||          ||||||||  |||||||||
 	 ------------------------------------------*/
 	npcbID = scene.LoadCharacter("Robber02");
 	npcb.ID(npcbID);
@@ -363,11 +363,11 @@ void FyMain(int argc, char **argv)
 	npcb.setBB(scene);
 
 	/*------------------------------------------
-	 ||||    || |||||||||   ||||||||  
-	 || ||   || ||      || ||      || 
-	 ||  ||  || |||||||||  ||         c
-	 ||   || || ||         ||      || 
-	 ||    |||| ||          ||||||||  
+	 ||||    || |||||||||   ||||||||   |||||||| 
+	 || ||   || ||      || ||      || ||      ||
+	 ||  ||  || |||||||||  ||         ||
+	 ||   || || ||         ||      || ||      ||
+	 ||    |||| ||          ||||||||   ||||||||
 	 ------------------------------------------*/
 	npccID = scene.LoadCharacter("Robber02");
 	npcc.ID(npccID);
@@ -396,11 +396,11 @@ void FyMain(int argc, char **argv)
 	npcc.setBB(scene);
 
 	/*------------------------------------------
-	 ||||    || |||||||||   ||||||||  
-	 || ||   || ||      || ||      || 
-	 ||  ||  || |||||||||  ||         d
-	 ||   || || ||         ||      || 
-	 ||    |||| ||          ||||||||  
+	 ||||    || |||||||||   ||||||||  ||||||||
+	 || ||   || ||      || ||      || ||      ||
+	 ||  ||  || |||||||||  ||         ||      ||
+	 ||   || || ||         ||      || ||      ||
+	 ||    |||| ||          ||||||||  ||||||||
 	 ------------------------------------------*/
 	npcdID = scene.LoadCharacter("AM001");
 	npcd.ID(npcdID);
@@ -429,11 +429,11 @@ void FyMain(int argc, char **argv)
 	npcd.setBB(scene);
 
 	/*------------------------------------------
-	 ||||    || |||||||||   ||||||||  
-	 || ||   || ||      || ||      || 
-	 ||  ||  || |||||||||  ||         e
-	 ||   || || ||         ||      || 
-	 ||    |||| ||          ||||||||  
+	 ||||    || |||||||||   ||||||||  ||||||||||
+	 || ||   || ||      || ||      || ||
+	 ||  ||  || |||||||||  ||         ||||||||
+	 ||   || || ||         ||      || ||
+	 ||    |||| ||          ||||||||  ||||||||||
 	 ------------------------------------------*/
 	npceID = scene.LoadCharacter("AMA001");
 	npce.ID(npceID);
@@ -450,7 +450,7 @@ void FyMain(int argc, char **argv)
 	npce.idleID = npce.GetBodyAction(NULL, "Idle");
 	npce.runID = npce.GetBodyAction(NULL, "Run");
 	npce.attack1ID = npce.GetBodyAction(NULL, "Attack");
-	npce.attack2ID = FAILED_ID;
+	npce.attack2ID = npce.GetBodyAction(NULL, "Attack");
 	npce.damageID = FAILED_ID;
 	npce.dieID = npce.GetBodyAction(NULL, "Die");
 
@@ -462,11 +462,11 @@ void FyMain(int argc, char **argv)
 	npce.setBB(scene);
 
 	/*------------------------------------------
-	 ||||    || |||||||||   ||||||||  
-	 || ||   || ||      || ||      || 
-	 ||  ||  || |||||||||  ||         f
-	 ||   || || ||         ||      || 
-	 ||    |||| ||          ||||||||  
+	 ||||    || |||||||||   ||||||||  ||||||||||
+	 || ||   || ||      || ||      || ||
+	 ||  ||  || |||||||||  ||         ||||||||
+	 ||   || || ||         ||      || ||
+	 ||    |||| ||          ||||||||  ||
 	 ------------------------------------------*/
 	npcfID = scene.LoadCharacter("CA002");
 	npcf.ID(npcfID);
@@ -495,11 +495,11 @@ void FyMain(int argc, char **argv)
 	npcf.setBB(scene);
 
 	/*------------------------------------------
-	 ||||    || |||||||||   ||||||||  
-	 || ||   || ||      || ||      || 
-	 ||  ||  || |||||||||  ||         g
-	 ||   || || ||         ||      || 
-	 ||    |||| ||          ||||||||  
+	 ||||    || |||||||||   ||||||||   ||||||||
+	 || ||   || ||      || ||      || ||      
+	 ||  ||  || |||||||||  ||         ||    |||
+	 ||   || || ||         ||      || ||      ||
+	 ||    |||| ||          ||||||||   ||||||||
 	 ------------------------------------------*/
 	npcgID = scene.LoadCharacter("CA005");
 	npcg.ID(npcgID);
@@ -576,14 +576,14 @@ void FyMain(int argc, char **argv)
 	FyDefineHotKey(FY_Z, Attack, FALSE);
 	FyDefineHotKey(FY_A, NpcControl, FALSE);
 	FyDefineHotKey(FY_S, NpcControl, FALSE);
-	FyDefineHotKey(FY_Q, NpcControl, FALSE);
-	FyDefineHotKey(FY_W, NpcControl, FALSE);
+	FyDefineHotKey(FY_D, NpcControl, FALSE);
+	FyDefineHotKey(FY_F, NpcControl, FALSE);
 	FyDefineHotKey(FY_F1, Reset, FALSE);
 	FyDefineHotKey(FY_1, cameraRotate, FALSE);
 	FyDefineHotKey(FY_2, cameraRotate, FALSE);
 
-	FyDefineHotKey(FY_3, cameraZoom, FALSE);
-	FyDefineHotKey(FY_4, cameraZoom, FALSE);
+	FyDefineHotKey(FY_Q, cameraZoom, FALSE);
+	FyDefineHotKey(FY_W, cameraZoom, FALSE);
 
 	// define some mouse functions
 	FyBindMouseFunction(LEFT_MOUSE, InitPivot, PivotCam, NULL, NULL);
@@ -670,6 +670,129 @@ void cameraZooming(){
 	else if(cameraZoomState == 0){
 
 	}
+}
+
+int nearestFriend(int myID, float *mypos)
+{
+	float pos[3], npcapos[3], npcbpos[3], npccpos[3], npcdpos[3], npcepos[3], npcfpos[3], npcgpos[3];
+	float shortestDist = 0.0f;
+	int result = NONE;
+	npca.GetPosition(npcapos);
+	npcb.GetPosition(npcbpos);
+	npcc.GetPosition(npccpos);
+	npcd.GetPosition(npcdpos);
+	npce.GetPosition(npcepos);
+	npcf.GetPosition(npcfpos);
+	npcg.GetPosition(npcgpos);
+	actor.GetPosition(pos);
+
+   shortestDist = myDist(mypos, pos);
+   result = ACTOR;
+
+   if (myID != NPCD && npcd.isFriend)
+   {
+      if (shortestDist > myDist(mypos, npcdpos))
+      {
+         shortestDist = myDist(mypos, npcdpos);
+         result = NPCD;
+      }
+   }
+   if (myID != NPCE && npce.isFriend)
+   {
+      if (shortestDist > myDist(mypos, npcepos))
+      {
+         shortestDist = myDist(mypos, npcepos);
+         result = NPCE;
+      }
+   }
+   if (myID != NPCF && npcf.isFriend)
+   {
+      if (shortestDist > myDist(mypos, npcfpos))
+      {
+         shortestDist = myDist(mypos, npcfpos);
+         result = NPCF;
+      }
+   }
+   if (myID != NPCG && npcg.isFriend)
+   {
+      if (shortestDist > myDist(mypos, npcgpos))
+      {
+         shortestDist = myDist(mypos, npcgpos);
+         result = NPCG;
+      }
+   }
+   if (shortestDist > 1000.0f)
+   {
+      result = NONE;
+   }
+
+   return result;
+}
+
+int nearestEnemy(int myID, float *mypos)
+{
+	float npcapos[3], npcbpos[3], npccpos[3], npcdpos[3], npcepos[3], npcfpos[3], npcgpos[3];
+	float shortestDist = 0.0f;
+	int result = NONE;
+	npca.GetPosition(npcapos);
+	npcb.GetPosition(npcbpos);
+	npcc.GetPosition(npccpos);
+	npcd.GetPosition(npcdpos);
+	npce.GetPosition(npcepos);
+	npcf.GetPosition(npcfpos);
+	npcg.GetPosition(npcgpos);
+
+	shortestDist = myDist(mypos, npcapos);
+	result = NPCA;
+
+	if (shortestDist > myDist(mypos, npcbpos))
+	{
+		shortestDist = myDist(mypos, npcbpos);
+		result = NPCB;
+	}
+	if (shortestDist > myDist(mypos, npccpos))
+	{
+		shortestDist = myDist(mypos, npccpos);
+		result = NPCC;
+	}
+	if (myID != NPCD && !npcd.isFriend)
+	{
+		if (shortestDist > myDist(mypos, npcdpos))
+		{
+			shortestDist = myDist(mypos, npcdpos);
+			result = NPCD;
+		}
+	}
+	if (myID != NPCE && !npce.isFriend)
+	{
+		if (shortestDist > myDist(mypos, npcepos))
+		{
+			shortestDist = myDist(mypos, npcepos);
+			result = NPCE;
+		}
+	}
+	if (myID != NPCF && !npcf.isFriend)
+	{
+		if (shortestDist > myDist(mypos, npcfpos))
+		{
+			shortestDist = myDist(mypos, npcfpos);
+			result = NPCF;
+		}
+	}
+	if (myID != NPCG && !npcg.isFriend)
+	{
+		if (shortestDist > myDist(mypos, npcgpos))
+		{
+			shortestDist = myDist(mypos, npcgpos);
+			result = NPCG;
+		}
+	}
+	if (shortestDist > 1000.0f)
+	{
+      result = NONE;
+	}
+
+	return result;
 }
 
 
@@ -1532,11 +1655,11 @@ void GameAI(int skip)
 	npcg.GetDirection(npcgfDir, npcguDir);
 
 	/*------------------------------------------
-	 ||||    || |||||||||   ||||||||  
-	 || ||   || ||      || ||      || 
-	 ||  ||  || |||||||||  ||         a
-	 ||   || || ||         ||      || 
-	 ||    |||| ||          ||||||||  
+	 ||||    || |||||||||   ||||||||     ||||
+	 || ||   || ||      || ||      ||   ||  ||
+	 ||  ||  || |||||||||  ||          ||    ||
+	 ||   || || ||         ||      || ||||||||||
+	 ||    |||| ||          ||||||||  ||      ||
 	 ------------------------------------------*/
 
 	if (npca.blood <= 0 && npca.state != DIE)
@@ -1545,6 +1668,147 @@ void GameAI(int skip)
 		npca.SetCurrentAction(NULL, 0, npca.dieID);
 		npca.frame = 0;
 	}
+
+   if (npca.state != DIE)
+   {
+      if (npca.isFriend)
+      {
+         if ((teammateID[0] == NPCA && isFollow[0]) || (teammateID[1] == NPCA && isFollow[1]))
+         {
+            npca.target = ACTOR;
+         }
+         else
+         {
+            switch(npca.target)
+            {
+               case NONE:
+                  npca.target = nearestEnemy(NPCA, npcapos);
+                  if (npca.target == NONE)
+                  {
+                     npca.target = ACTOR;
+                  }
+                  break;
+               case ACTOR:
+                  if (actor.state == DIE)
+                  {
+                     npca.target = NONE;
+                  }
+                  if ((teammateID[0] == NPCA && !isFollow[0]) || (teammateID[1] == NPCA && !isFollow[1]))
+                  {
+                     npca.target = nearestEnemy(NPCA, npcapos);
+                     if (npca.target == NONE)
+                     {
+                        npca.target = ACTOR;
+                     }
+                  }
+                  break;
+               case NPCA:
+                  if (npca.state == DIE)
+                  {
+                     npca.target = NONE;
+                  }
+                  break;
+               case NPCB:
+                  if (npcb.state == DIE)
+                  {
+                     npca.target = NONE;
+                  }
+                  break;
+               case NPCC:
+                  if (npcc.state == DIE)
+                  {
+                     npca.target = NONE;
+                  }
+                  break;
+               case NPCD:
+                  if (npcd.state == DIE)
+                  {
+                     npca.target = NONE;
+                  }
+                  break;
+               case NPCE:
+                  if (npce.state == DIE)
+                  {
+                     npca.target = NONE;
+                  }
+                  break;
+               case NPCF:
+                  if (npcf.state == DIE)
+                  {
+                     npca.target = NONE;
+                  }
+                  break;
+               case NPCG:
+                  if (npcg.state == DIE)
+                  {
+                     npca.target = NONE;
+                  }
+                  break;
+               default:
+                  break;
+            }
+         }
+      }
+      else
+      {
+         switch(npca.target)
+         {
+            case NONE:
+               npca.target = nearestFriend(NPCA, npcapos);
+               break;
+            case ACTOR:
+               if (actor.state == DIE)
+               {
+                  npca.target = NONE;
+               }
+               break;
+            case NPCA:
+               if (npca.state == DIE)
+               {
+                  npca.target = NONE;
+               }
+               break;
+            case NPCB:
+               if (npcb.state == DIE)
+               {
+                  npca.target = NONE;
+               }
+               break;
+            case NPCC:
+               if (npcc.state == DIE)
+               {
+                  npca.target = NONE;
+               }
+               break;
+            case NPCD:
+               if (npcd.state == DIE)
+               {
+                  npca.target = NONE;
+               }
+               break;
+            case NPCE:
+               if (npce.state == DIE)
+               {
+                  npca.target = NONE;
+               }
+               break;
+            case NPCF:
+               if (npcf.state == DIE)
+               {
+                  npca.target = NONE;
+               }
+               break;
+            case NPCG:
+               if (npcg.state == DIE)
+               {
+                  npca.target = NONE;
+               }
+               break;
+            default:
+               break;
+         }
+      }
+   }
 
 	/*
 		npca.state:
@@ -1560,41 +1824,384 @@ void GameAI(int skip)
 		case IDLE:
 		// idle
 			npca.Play(LOOP, (float) skip, FALSE, TRUE);
-			if (myDist(pos, npcapos) <= 1000.0f && myDist(pos, npcapos) >= 100.0f)
-			{
-				npca.state = RUN;
-				npca.SetCurrentAction(NULL, 0, npca.runID);
-				npca.frame = 0;
-			}
-			else if (myDist(pos, npcapos) < 100.0f  && actor.state != DIE)
-			{
-				npca.wait++;
-				npcafDir[0] = pos[0] - npcapos[0];
-				npcafDir[1] = pos[1] - npcapos[1];
-				npca.SetDirection(npcafDir, npcauDir);
-				if (npca.wait == 50)
-				{
-					npca.state = ATTACK1;
-					npca.SetCurrentAction(NULL, 0, npca.attack1ID);
-					npca.frame = 0;
-					npca.wait = 0;
-				}
-			}			
+			switch (npca.target)
+         {
+            case NONE:
+               break;
+            case ACTOR:
+               if (npca.isFriend)
+               {
+                  if (myDist(pos, npcapos) >= 100.0f)
+                  {
+                     npca.state = RUN;
+                     npca.SetCurrentAction(NULL, 0, npca.runID);
+                     npca.frame = 0;
+                  }
+               }
+               else
+               {
+                  if (myDist(pos, npcapos) <= 500.0f && myDist(pos, npcapos) >= 100.0f)
+                  {  
+                     npca.state = RUN;
+                     npca.SetCurrentAction(NULL, 0, npca.runID);
+                     npca.frame = 0;
+                  }
+                  else if (myDist(pos, npcapos) < 100.0f  && actor.state != DIE)
+                  {
+                     npca.wait1++;
+                     npcafDir[0] = pos[0] - npcapos[0];
+                     npcafDir[1] = pos[1] - npcapos[1];
+                     npca.SetDirection(npcafDir, npcauDir);
+                     if (npca.wait1 % 50 == 0)
+                     {
+                        npca.wait2++;
+                        if (npca.wait2 % 2 == 0)
+                        {
+                           npca.state = ATTACK2;
+                           npca.SetCurrentAction(NULL, 0, npca.attack2ID);
+                           npca.frame = 0;
+                        }
+                        else
+                        {
+                           npca.state = ATTACK1;
+                           npca.SetCurrentAction(NULL, 0, npca.attack1ID);
+                           npca.frame = 0;
+                        }
+                     }
+                  }
+               }
+               break;
+            case NPCA:
+               if (myDist(npcapos, npcapos) <= 600.0f && myDist(npcapos, npcapos) >= 100.0f)
+               {
+                  npca.state = RUN;
+                  npca.SetCurrentAction(NULL, 0, npca.runID);
+                  npca.frame = 0;
+               }
+               else if (myDist(npcapos, npcapos) < 100.0f)
+               {
+                  npca.wait1++;
+                  npcafDir[0] = npcapos[0] - npcapos[0];
+                  npcafDir[1] = npcapos[1] - npcapos[1];
+                  npca.SetDirection(npcafDir, npcauDir);
+                  if (npca.wait1 % 50 == 0)
+                  {
+                     npca.wait1++;
+                     if (npca.wait2 % 2 == 0)
+                     {
+                        npca.state = ATTACK2;
+                        npca.SetCurrentAction(NULL, 0, npca.attack2ID);
+                        npca.frame = 0;
+                     }
+                     else
+                     {
+                        npca.state = ATTACK1;
+                        npca.SetCurrentAction(NULL, 0, npca.attack1ID);
+                        npca.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCB:
+               if (myDist(npcapos, npcbpos) <= 600.0f && myDist(npcapos, npcbpos) >= 100.0f)
+               {
+                  npca.state = RUN;
+                  npca.SetCurrentAction(NULL, 0, npca.runID);
+                  npca.frame = 0;
+               }
+               else if (myDist(npcapos, npcbpos) < 100.0f)
+               {
+                  npca.wait1++;
+                  npcafDir[0] = npcbpos[0] - npcapos[0];
+                  npcafDir[1] = npcbpos[1] - npcapos[1];
+                  npca.SetDirection(npcafDir, npcauDir);
+                  if (npca.wait1 % 50 == 0)
+                  {
+                     npca.wait1++;
+                     if (npca.wait2 % 2 == 0)
+                     {
+                        npca.state = ATTACK2;
+                        npca.SetCurrentAction(NULL, 0, npca.attack2ID);
+                        npca.frame = 0;
+                     }
+                     else
+                     {
+                        npca.state = ATTACK1;
+                        npca.SetCurrentAction(NULL, 0, npca.attack1ID);
+                        npca.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCC:
+               if (myDist(npcapos, npccpos) <= 600.0f && myDist(npcapos, npccpos) >= 100.0f)
+               {
+                  npca.state = RUN;
+                  npca.SetCurrentAction(NULL, 0, npca.runID);
+                  npca.frame = 0;
+               }
+               else if (myDist(npcapos, npccpos) < 100.0f)
+               {
+                  npca.wait1++;
+                  npcafDir[0] = npccpos[0] - npcapos[0];
+                  npcafDir[1] = npccpos[1] - npcapos[1];
+                  npca.SetDirection(npcafDir, npcauDir);
+                  if (npca.wait1 % 50 == 0)
+                  {
+                     npca.wait1++;
+                     if (npca.wait2 % 2 == 0)
+                     {
+                        npca.state = ATTACK2;
+                        npca.SetCurrentAction(NULL, 0, npca.attack2ID);
+                        npca.frame = 0;
+                     }
+                     else
+                     {
+                        npca.state = ATTACK1;
+                        npca.SetCurrentAction(NULL, 0, npca.attack1ID);
+                        npca.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCD:
+               if (myDist(npcapos, npcdpos) <= 600.0f && myDist(npcapos, npcdpos) >= 100.0f)
+               {
+                  npca.state = RUN;
+                  npca.SetCurrentAction(NULL, 0, npca.runID);
+                  npca.frame = 0;
+               }
+               else if (myDist(npcapos, npcdpos) < 100.0f)
+               {
+                  npca.wait1++;
+                  npcafDir[0] = npcdpos[0] - npcapos[0];
+                  npcafDir[1] = npcdpos[1] - npcapos[1];
+                  npca.SetDirection(npcafDir, npcauDir);
+                  if (npca.wait1 % 50 == 0)
+                  {
+                     npca.wait1++;
+                     if (npca.wait2 % 2 == 0)
+                     {
+                        npca.state = ATTACK2;
+                        npca.SetCurrentAction(NULL, 0, npca.attack2ID);
+                        npca.frame = 0;
+                     }
+                     else
+                     {
+                        npca.state = ATTACK1;
+                        npca.SetCurrentAction(NULL, 0, npca.attack1ID);
+                        npca.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCE:
+               if (myDist(npcapos, npcepos) <= 600.0f && myDist(npcapos, npcepos) >= 100.0f)
+               {
+                  npca.state = RUN;
+                  npca.SetCurrentAction(NULL, 0, npca.runID);
+                  npca.frame = 0;
+               }
+               else if (myDist(npcapos, npcepos) < 100.0f)
+               {
+                  npca.wait1++;
+                  npcafDir[0] = npcepos[0] - npcapos[0];
+                  npcafDir[1] = npcepos[1] - npcapos[1];
+                  npca.SetDirection(npcafDir, npcauDir);
+                  if (npca.wait1 % 50 == 0)
+                  {
+                     npca.wait1++;
+                     if (npca.wait2 % 2 == 0)
+                     {
+                        npca.state = ATTACK2;
+                        npca.SetCurrentAction(NULL, 0, npca.attack2ID);
+                        npca.frame = 0;
+                     }
+                     else
+                     {
+                        npca.state = ATTACK1;
+                        npca.SetCurrentAction(NULL, 0, npca.attack1ID);
+                        npca.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCF:
+               if (myDist(npcapos, npcfpos) <= 600.0f && myDist(npcapos, npcfpos) >= 100.0f)
+               {
+                  npca.state = RUN;
+                  npca.SetCurrentAction(NULL, 0, npca.runID);
+                  npca.frame = 0;
+               }
+               else if (myDist(npcapos, npcfpos) < 100.0f)
+               {
+                  npca.wait1++;
+                  npcafDir[0] = npcfpos[0] - npcapos[0];
+                  npcafDir[1] = npcfpos[1] - npcapos[1];
+                  npca.SetDirection(npcafDir, npcauDir);
+                  if (npca.wait1 % 50 == 0)
+                  {
+                     npca.wait1++;
+                     if (npca.wait2 % 2 == 0)
+                     {
+                        npca.state = ATTACK2;
+                        npca.SetCurrentAction(NULL, 0, npca.attack2ID);
+                        npca.frame = 0;
+                     }
+                     else
+                     {
+                        npca.state = ATTACK1;
+                        npca.SetCurrentAction(NULL, 0, npca.attack1ID);
+                        npca.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCG:
+               if (myDist(npcapos, npcgpos) <= 600.0f && myDist(npcapos, npcgpos) >= 100.0f)
+               {
+                  npca.state = RUN;
+                  npca.SetCurrentAction(NULL, 0, npca.runID);
+                  npca.frame = 0;
+               }
+               else if (myDist(npcapos, npcgpos) < 100.0f)
+               {
+                  npca.wait1++;
+                  npcafDir[0] = npcgpos[0] - npcapos[0];
+                  npcafDir[1] = npcgpos[1] - npcapos[1];
+                  npca.SetDirection(npcafDir, npcauDir);
+                  if (npca.wait1 % 50 == 0)
+                  {
+                     npca.wait1++;
+                     if (npca.wait2 % 2 == 0)
+                     {
+                        npca.state = ATTACK2;
+                        npca.SetCurrentAction(NULL, 0, npca.attack2ID);
+                        npca.frame = 0;
+                     }
+                     else
+                     {
+                        npca.state = ATTACK1;
+                        npca.SetCurrentAction(NULL, 0, npca.attack1ID);
+                        npca.frame = 0;
+                     }
+                  }
+               }
+               break;
+            default:
+               break;
+         }		
 			break;
 		case RUN:
 		// run
 			npca.Play(LOOP, (float) skip, FALSE, TRUE);
 			
-			npcafDir[0] = pos[0] - npcapos[0];
-			npcafDir[1] = pos[1] - npcapos[1];
-			npca.SetDirection(npcafDir, npcauDir);
-			npca.MoveForward(5.0f, TRUE, FALSE, FALSE, TRUE);
-			if (myDist(pos, npcapos) < 90.0f)
-			{
-				npca.state = IDLE;
-				npca.SetCurrentAction(NULL, 0, npca.idleID);
-				npca.frame = 0;
-			}
+			switch(npca.target)
+         {
+            case NONE:
+               npca.state = IDLE;
+               npca.SetCurrentAction(NULL, 0, npca.idleID);
+               npca.frame = 0;
+               break;
+            case ACTOR:
+               npcafDir[0] = pos[0] - npcapos[0];
+               npcafDir[1] = pos[1] - npcapos[1];
+               npca.SetDirection(npcafDir, npcauDir);
+               npca.MoveForward(5.0f);
+               if (myDist(pos, npcapos) < 90.0f)
+               {
+                  npca.state = IDLE;
+                  npca.SetCurrentAction(NULL, 0, npca.idleID);
+                  npca.frame = 0;
+               }
+               break;
+            case NPCA:
+               npcafDir[0] = npcapos[0] - npcapos[0];
+               npcafDir[1] = npcapos[1] - npcapos[1];
+               npca.SetDirection(npcafDir, npcauDir);
+               npca.MoveForward(5.0f);
+               if (myDist(npcapos, npcapos) < 90.0f)
+               {
+                  npca.state = IDLE;
+                  npca.SetCurrentAction(NULL, 0, npca.idleID);
+                  npca.frame = 0;
+               }
+               break;
+            case NPCB:
+               npcafDir[0] = npcbpos[0] - npcapos[0];
+               npcafDir[1] = npcbpos[1] - npcapos[1];
+               npca.SetDirection(npcafDir, npcauDir);
+               npca.MoveForward(5.0f);
+               if (myDist(npcbpos, npcapos) < 90.0f)
+               {
+                  npca.state = IDLE;
+                  npca.SetCurrentAction(NULL, 0, npca.idleID);
+                  npca.frame = 0;
+               }
+               break;
+            case NPCC:
+               npcafDir[0] = npccpos[0] - npcapos[0];
+               npcafDir[1] = npccpos[1] - npcapos[1];
+               npca.SetDirection(npcafDir, npcauDir);
+               npca.MoveForward(5.0f);
+               if (myDist(npccpos, npcapos) < 90.0f)
+               {
+                  npca.state = IDLE;
+                  npca.SetCurrentAction(NULL, 0, npca.idleID);
+                  npca.frame = 0;
+               }
+               break;
+            case NPCD:
+               npcafDir[0] = npcdpos[0] - npcapos[0];
+               npcafDir[1] = npcdpos[1] - npcapos[1];
+               npca.SetDirection(npcafDir, npcauDir);
+               npca.MoveForward(5.0f);
+               if (myDist(npcdpos, npcapos) < 90.0f)
+               {
+                  npca.state = IDLE;
+                  npca.SetCurrentAction(NULL, 0, npca.idleID);
+                  npca.frame = 0;
+               }
+               break;
+            case NPCE:
+               npcafDir[0] = npcepos[0] - npcapos[0];
+               npcafDir[1] = npcepos[1] - npcapos[1];
+               npca.SetDirection(npcafDir, npcauDir);
+               npca.MoveForward(5.0f);
+               if (myDist(npcepos, npcapos) < 90.0f)
+               {
+                  npca.state = IDLE;
+                  npca.SetCurrentAction(NULL, 0, npca.idleID);
+                  npca.frame = 0;
+               }
+               break;
+            case NPCF:
+               npcafDir[0] = npcfpos[0] - npcapos[0];
+               npcafDir[1] = npcfpos[1] - npcapos[1];
+               npca.SetDirection(npcafDir, npcauDir);
+               npca.MoveForward(5.0f);
+               if (myDist(npcfpos, npcapos) < 90.0f)
+               {
+                  npca.state = IDLE;
+                  npca.SetCurrentAction(NULL, 0, npca.idleID);
+                  npca.frame = 0;
+               }
+               break;
+            case NPCG:
+               npcafDir[0] = npcgpos[0] - npcapos[0];
+               npcafDir[1] = npcgpos[1] - npcapos[1];
+               npca.SetDirection(npcafDir, npcauDir);
+               npca.MoveForward(5.0f);
+               if (myDist(npcgpos, npcapos) < 90.0f)
+               {
+                  npca.state = IDLE;
+                  npca.SetCurrentAction(NULL, 0, npca.idleID);
+                  npca.frame = 0;
+               }
+               break;
+            default:
+               break;
+         }
 			break;
 		case ATTACK1:
 		// attackL 1 36 frames
@@ -1606,18 +2213,164 @@ void GameAI(int skip)
 				hP.Load("att3.wav");
 				hP.Play(ONCE);
 
-				if (actor.state != DIE)
-				{
-					if(isHit(npcapos, pos, npcafDir, 120.0f, 40.0f))
-					{
-						actor.blood -= 30;
-						actor.state = DAMAGE;
-						actor.SetCurrentAction(NULL, 0, heavyDamagedID);
-						actor.frame = 0;
-						attackKeyLocked = true;
-						movementKeyLocked = true;
-					}		
-				}	
+				if (npca.isFriend)
+            {
+               if (npca.state != DIE && !npca.isFriend)
+               {
+                  if(isHit(npcapos, npcapos, npcafDir, 120.0f, 40.0f))
+                  {
+                     npca.blood -= 30;
+                     npca.state = DAMAGE;
+                     npca.SetCurrentAction(NULL, 0, npca.damageID);
+                     npca.frame = 0;
+                  }
+               }
+               if (npcb.state != DIE && !npcb.isFriend)
+               {
+                  if(isHit(npcapos, npcbpos, npcafDir, 120.0f, 40.0f))
+                  {
+                     npcb.blood -= 30;
+                     npcb.state = DAMAGE;
+                     npcb.SetCurrentAction(NULL, 0, npcb.damageID);
+                     npcb.frame = 0;
+                  }
+               }
+               if (npcc.state != DIE && !npcc.isFriend)
+               {
+                  if(isHit(npcapos, npccpos, npcafDir, 120.0f, 40.0f))
+                  {
+                     npcc.blood -= 30;
+                     npcc.state = DAMAGE;
+                     npcc.SetCurrentAction(NULL, 0, npcc.damageID);
+                     npcc.frame = 0;
+                  }
+               }
+               if (npcd.state != DIE && !npcd.isFriend)
+               {
+                  if(isHit(npcapos, npcdpos, npcafDir, 120.0f, 40.0f))
+                  {
+                     npcd.blood -= 30;
+                     npcd.state = DAMAGE;
+                     npcd.SetCurrentAction(NULL, 0, npcd.damageID);
+                     npcd.frame = 0;
+                  }
+               }
+               if (npce.state != DIE && !npce.isFriend)
+               {
+                  if(isHit(npcapos, npcepos, npcafDir, 120.0f, 40.0f))
+                  {
+                     npce.blood -= 30;
+                     npce.state = DAMAGE;
+                     npce.SetCurrentAction(NULL, 0, npce.damageID);
+                     npce.frame = 0;
+                  }
+               }
+               if (npcf.state != DIE && !npcf.isFriend)
+               {
+                  if(isHit(npcapos, npcfpos, npcafDir, 120.0f, 40.0f))
+                  {
+                     npcf.blood -= 30;
+                     npcf.state = DAMAGE;
+                     npcf.SetCurrentAction(NULL, 0, npcf.damageID);
+                     npcf.frame = 0;
+                  }
+               }
+               if (npcg.state != DIE && !npcg.isFriend)
+               {
+                  if(isHit(npcapos, npcgpos, npcafDir, 120.0f, 40.0f))
+                  {
+                     npcg.blood -= 30;
+                     npcg.state = DAMAGE;
+                     npcg.SetCurrentAction(NULL, 0, npcg.damageID);
+                     npcg.frame = 0;
+                  }
+               }
+            }
+            else
+            {
+               if (actor.state != DIE)
+               {
+                  if(isHit(npcapos, pos, npcafDir, 120.0f, 40.0f))
+                  {
+                     actor.blood -= 30;
+                     actor.state = DAMAGE;
+                     actor.SetCurrentAction(NULL, 0, heavyDamagedID);
+                     actor.frame = 0;
+                     attackKeyLocked = true;
+                     movementKeyLocked = true;
+                  }     
+               }
+               if (npca.state != DIE && npca.isFriend)
+               {
+                  if(isHit(npcapos, npcapos, npcafDir, 120.0f, 40.0f))
+                  {
+                     npca.blood -= 30;
+                     npca.state = DAMAGE;
+                     npca.SetCurrentAction(NULL, 0, npca.damageID);
+                     npca.frame = 0;
+                  }
+               }
+               if (npcb.state != DIE && npcb.isFriend)
+               {
+                  if(isHit(npcapos, npcbpos, npcafDir, 120.0f, 40.0f))
+                  {
+                     npcb.blood -= 30;
+                     npcb.state = DAMAGE;
+                     npcb.SetCurrentAction(NULL, 0, npcb.damageID);
+                     npcb.frame = 0;
+                  }
+               }
+               if (npcc.state != DIE && npcc.isFriend)
+               {
+                  if(isHit(npcapos, npccpos, npcafDir, 120.0f, 40.0f))
+                  {
+                     npcc.blood -= 30;
+                     npcc.state = DAMAGE;
+                     npcc.SetCurrentAction(NULL, 0, npcc.damageID);
+                     npcc.frame = 0;
+                  }
+               }
+               if (npcd.state != DIE && npcd.isFriend)
+               {
+                  if(isHit(npcapos, npcdpos, npcafDir, 120.0f, 40.0f))
+                  {
+                     npcd.blood -= 30;
+                     npcd.state = DAMAGE;
+                     npcd.SetCurrentAction(NULL, 0, npcd.damageID);
+                     npcd.frame = 0;
+                  }
+               }
+               if (npce.state != DIE && npce.isFriend)
+               {
+                  if(isHit(npcapos, npcepos, npcafDir, 120.0f, 40.0f))
+                  {
+                     npce.blood -= 30;
+                     npce.state = DAMAGE;
+                     npce.SetCurrentAction(NULL, 0, npce.damageID);
+                     npce.frame = 0;
+                  }
+               }
+               if (npcf.state != DIE && npcf.isFriend)
+               {
+                  if(isHit(npcapos, npcfpos, npcafDir, 120.0f, 40.0f))
+                  {
+                     npcf.blood -= 30;
+                     npcf.state = DAMAGE;
+                     npcf.SetCurrentAction(NULL, 0, npcf.damageID);
+                     npcf.frame = 0;
+                  }
+               }
+               if (npcg.state != DIE && npcg.isFriend)
+               {
+                  if(isHit(npcapos, npcgpos, npcafDir, 120.0f, 40.0f))
+                  {
+                     npcg.blood -= 30;
+                     npcg.state = DAMAGE;
+                     npcg.SetCurrentAction(NULL, 0, npcg.damageID);
+                     npcg.frame = 0;
+                  }
+               }
+            }	
 			}
 			if (npca.frame == 35)
 			{
@@ -1628,6 +2381,179 @@ void GameAI(int skip)
 			break;
 		case ATTACK2:
 		// attackL 2 41 frames
+         npca.Play(ONCE, (float) skip, FALSE, TRUE);
+         npca.frame++;
+
+         if (npca.frame == 12)
+         {
+            hP.Load("att3.wav");
+            hP.Play(ONCE);
+
+            if (npca.isFriend)
+            {
+               if (npca.state != DIE && !npca.isFriend)
+               {
+                  if(isHit(npcapos, npcapos, npcafDir, 120.0f, 40.0f))
+                  {
+                     npca.blood -= 30;
+                     npca.state = DAMAGE;
+                     npca.SetCurrentAction(NULL, 0, npca.damageID);
+                     npca.frame = 0;
+                  }
+               }
+               if (npcb.state != DIE && !npcb.isFriend)
+               {
+                  if(isHit(npcapos, npcbpos, npcafDir, 120.0f, 40.0f))
+                  {
+                     npcb.blood -= 30;
+                     npcb.state = DAMAGE;
+                     npcb.SetCurrentAction(NULL, 0, npcb.damageID);
+                     npcb.frame = 0;
+                  }
+               }
+               if (npcc.state != DIE && !npcc.isFriend)
+               {
+                  if(isHit(npcapos, npccpos, npcafDir, 120.0f, 40.0f))
+                  {
+                     npcc.blood -= 30;
+                     npcc.state = DAMAGE;
+                     npcc.SetCurrentAction(NULL, 0, npcc.damageID);
+                     npcc.frame = 0;
+                  }
+               }
+               if (npcd.state != DIE && !npcd.isFriend)
+               {
+                  if(isHit(npcapos, npcdpos, npcafDir, 120.0f, 40.0f))
+                  {
+                     npcd.blood -= 30;
+                     npcd.state = DAMAGE;
+                     npcd.SetCurrentAction(NULL, 0, npcd.damageID);
+                     npcd.frame = 0;
+                  }
+               }
+               if (npce.state != DIE && !npce.isFriend)
+               {
+                  if(isHit(npcapos, npcepos, npcafDir, 120.0f, 40.0f))
+                  {
+                     npce.blood -= 30;
+                     npce.state = DAMAGE;
+                     npce.SetCurrentAction(NULL, 0, npce.damageID);
+                     npce.frame = 0;
+                  }
+               }
+               if (npcf.state != DIE && !npcf.isFriend)
+               {
+                  if(isHit(npcapos, npcfpos, npcafDir, 120.0f, 40.0f))
+                  {
+                     npcf.blood -= 30;
+                     npcf.state = DAMAGE;
+                     npcf.SetCurrentAction(NULL, 0, npcf.damageID);
+                     npcf.frame = 0;
+                  }
+               }
+               if (npcg.state != DIE && !npcg.isFriend)
+               {
+                  if(isHit(npcapos, npcgpos, npcafDir, 120.0f, 40.0f))
+                  {
+                     npcg.blood -= 30;
+                     npcg.state = DAMAGE;
+                     npcg.SetCurrentAction(NULL, 0, npcg.damageID);
+                     npcg.frame = 0;
+                  }
+               }
+            }
+            else
+            {
+               if (actor.state != DIE)
+               {
+                  if(isHit(npcapos, pos, npcafDir, 120.0f, 40.0f))
+                  {
+                     actor.blood -= 30;
+                     actor.state = DAMAGE;
+                     actor.SetCurrentAction(NULL, 0, heavyDamagedID);
+                     actor.frame = 0;
+                     attackKeyLocked = true;
+                     movementKeyLocked = true;
+                  }     
+               }
+               if (npca.state != DIE && npca.isFriend)
+               {
+                  if(isHit(npcapos, npcapos, npcafDir, 120.0f, 40.0f))
+                  {
+                     npca.blood -= 30;
+                     npca.state = DAMAGE;
+                     npca.SetCurrentAction(NULL, 0, npca.damageID);
+                     npca.frame = 0;
+                  }
+               }
+               if (npcb.state != DIE && npcb.isFriend)
+               {
+                  if(isHit(npcapos, npcbpos, npcafDir, 120.0f, 40.0f))
+                  {
+                     npcb.blood -= 30;
+                     npcb.state = DAMAGE;
+                     npcb.SetCurrentAction(NULL, 0, npcb.damageID);
+                     npcb.frame = 0;
+                  }
+               }
+               if (npcc.state != DIE && npcc.isFriend)
+               {
+                  if(isHit(npcapos, npccpos, npcafDir, 120.0f, 40.0f))
+                  {
+                     npcc.blood -= 30;
+                     npcc.state = DAMAGE;
+                     npcc.SetCurrentAction(NULL, 0, npcc.damageID);
+                     npcc.frame = 0;
+                  }
+               }
+               if (npcd.state != DIE && npcd.isFriend)
+               {
+                  if(isHit(npcapos, npcdpos, npcafDir, 120.0f, 40.0f))
+                  {
+                     npcd.blood -= 30;
+                     npcd.state = DAMAGE;
+                     npcd.SetCurrentAction(NULL, 0, npcd.damageID);
+                     npcd.frame = 0;
+                  }
+               }
+               if (npce.state != DIE && npce.isFriend)
+               {
+                  if(isHit(npcapos, npcepos, npcafDir, 120.0f, 40.0f))
+                  {
+                     npce.blood -= 30;
+                     npce.state = DAMAGE;
+                     npce.SetCurrentAction(NULL, 0, npce.damageID);
+                     npce.frame = 0;
+                  }
+               }
+               if (npcf.state != DIE && npcf.isFriend)
+               {
+                  if(isHit(npcapos, npcfpos, npcafDir, 120.0f, 40.0f))
+                  {
+                     npcf.blood -= 30;
+                     npcf.state = DAMAGE;
+                     npcf.SetCurrentAction(NULL, 0, npcf.damageID);
+                     npcf.frame = 0;
+                  }
+               }
+               if (npcg.state != DIE && npcg.isFriend)
+               {
+                  if(isHit(npcapos, npcgpos, npcafDir, 120.0f, 40.0f))
+                  {
+                     npcg.blood -= 30;
+                     npcg.state = DAMAGE;
+                     npcg.SetCurrentAction(NULL, 0, npcg.damageID);
+                     npcg.frame = 0;
+                  }
+               }
+            }  
+         }
+         if (npca.frame == 40)
+         {
+            npca.state = IDLE;
+            npca.SetCurrentAction(NULL, 0, npca.idleID); 
+            npca.frame = 0;
+         }
 			break;
 		case DAMAGE:
 		// damage L 26
@@ -1670,11 +2596,11 @@ void GameAI(int skip)
 	npca.BB();
 
 	/*------------------------------------------
-	 ||||    || |||||||||   ||||||||  
-	 || ||   || ||      || ||      || 
-	 ||  ||  || |||||||||  ||         b
-	 ||   || || ||         ||      || 
-	 ||    |||| ||          ||||||||  
+	 ||||    || |||||||||   ||||||||  |||||||||
+	 || ||   || ||      || ||      || ||      ||
+	 ||  ||  || |||||||||  ||         |||||||||
+	 ||   || || ||         ||      || ||      ||
+	 ||    |||| ||          ||||||||  |||||||||
 	 ------------------------------------------*/
 
 	if (npcb.blood <= 0 && npcb.state != DIE)
@@ -1682,6 +2608,147 @@ void GameAI(int skip)
 		npcb.state = DIE;
 		npcb.SetCurrentAction(NULL, 0, npcb.dieID);
 	}
+
+   if (npcb.state != DIE)
+   {
+      if (npcb.isFriend)
+      {
+         if ((teammateID[0] == NPCB && isFollow[0]) || (teammateID[1] == NPCB && isFollow[1]))
+         {
+            npcb.target = ACTOR;
+         }
+         else
+         {
+            switch(npcb.target)
+            {
+               case NONE:
+                  npcb.target = nearestEnemy(NPCB, npcbpos);
+                  if (npcb.target == NONE)
+                  {
+                     npcb.target = ACTOR;
+                  }
+                  break;
+               case ACTOR:
+                  if (actor.state == DIE)
+                  {
+                     npcb.target = NONE;
+                  }
+                  if ((teammateID[0] == NPCB && !isFollow[0]) || (teammateID[1] == NPCB && !isFollow[1]))
+                  {
+                     npcb.target = nearestEnemy(NPCB, npcbpos);
+                     if (npcb.target == NONE)
+                     {
+                        npcb.target = ACTOR;
+                     }
+                  }
+                  break;
+               case NPCA:
+                  if (npca.state == DIE)
+                  {
+                     npcb.target = NONE;
+                  }
+                  break;
+               case NPCB:
+                  if (npcb.state == DIE)
+                  {
+                     npcb.target = NONE;
+                  }
+                  break;
+               case NPCC:
+                  if (npcc.state == DIE)
+                  {
+                     npcb.target = NONE;
+                  }
+                  break;
+               case NPCD:
+                  if (npcd.state == DIE)
+                  {
+                     npcb.target = NONE;
+                  }
+                  break;
+               case NPCE:
+                  if (npce.state == DIE)
+                  {
+                     npcb.target = NONE;
+                  }
+                  break;
+               case NPCF:
+                  if (npcf.state == DIE)
+                  {
+                     npcb.target = NONE;
+                  }
+                  break;
+               case NPCG:
+                  if (npcg.state == DIE)
+                  {
+                     npcb.target = NONE;
+                  }
+                  break;
+               default:
+                  break;
+            }
+         }
+      }
+      else
+      {
+         switch(npcb.target)
+         {
+            case NONE:
+               npcb.target = nearestFriend(NPCB, npcbpos);
+               break;
+            case ACTOR:
+               if (actor.state == DIE)
+               {
+                  npcb.target = NONE;
+               }
+               break;
+            case NPCA:
+               if (npca.state == DIE)
+               {
+                  npcb.target = NONE;
+               }
+               break;
+            case NPCB:
+               if (npcb.state == DIE)
+               {
+                  npcb.target = NONE;
+               }
+               break;
+            case NPCC:
+               if (npcc.state == DIE)
+               {
+                  npcb.target = NONE;
+               }
+               break;
+            case NPCD:
+               if (npcd.state == DIE)
+               {
+                  npcb.target = NONE;
+               }
+               break;
+            case NPCE:
+               if (npce.state == DIE)
+               {
+                  npcb.target = NONE;
+               }
+               break;
+            case NPCF:
+               if (npcf.state == DIE)
+               {
+                  npcb.target = NONE;
+               }
+               break;
+            case NPCG:
+               if (npcg.state == DIE)
+               {
+                  npcb.target = NONE;
+               }
+               break;
+            default:
+               break;
+         }
+      }
+   }
 
 	/*
 		npcb.state:
@@ -1697,41 +2764,384 @@ void GameAI(int skip)
 		case IDLE:
 		// combat idle
 			npcb.Play(LOOP, (float) skip, FALSE, TRUE);
-			if (myDist(pos, npcbpos) <= 1000.0f && myDist(pos, npcbpos) >= 100.0f)
-			{
-				npcb.state = RUN;
-				npcb.SetCurrentAction(NULL, 0, npcb.runID);
-				npcb.frame = 0;
-			}
-			else if (myDist(pos, npcbpos) < 100.0f  && actor.state != DIE)
-			{
-				npcb.wait++;
-				npcbfDir[0] = pos[0] - npcbpos[0];
-				npcbfDir[1] = pos[1] - npcbpos[1];
-				npcb.SetDirection(npcbfDir, npcbuDir);
-				if (npcb.wait == 50)
-				{
-					npcb.state = ATTACK1;
-					npcb.SetCurrentAction(NULL, 0, npcb.attack1ID);
-					npcb.frame = 0;
-					npcb.wait = 0;
-				}
-			}
+			switch (npcb.target)
+         {
+            case NONE:
+               break;
+            case ACTOR:
+               if (npcb.isFriend)
+               {
+                  if (myDist(pos, npcbpos) >= 100.0f)
+                  {
+                     npcb.state = RUN;
+                     npcb.SetCurrentAction(NULL, 0, npcb.runID);
+                     npcb.frame = 0;
+                  }
+               }
+               else
+               {
+                  if (myDist(pos, npcbpos) <= 500.0f && myDist(pos, npcbpos) >= 100.0f)
+                  {  
+                     npcb.state = RUN;
+                     npcb.SetCurrentAction(NULL, 0, npcb.runID);
+                     npcb.frame = 0;
+                  }
+                  else if (myDist(pos, npcbpos) < 100.0f  && actor.state != DIE)
+                  {
+                     npcb.wait1++;
+                     npcbfDir[0] = pos[0] - npcbpos[0];
+                     npcbfDir[1] = pos[1] - npcbpos[1];
+                     npcb.SetDirection(npcbfDir, npcbuDir);
+                     if (npcb.wait1 % 50 == 0)
+                     {
+                        npcb.wait2++;
+                        if (npcb.wait2 % 2 == 0)
+                        {
+                           npcb.state = ATTACK2;
+                           npcb.SetCurrentAction(NULL, 0, npcb.attack2ID);
+                           npcb.frame = 0;
+                        }
+                        else
+                        {
+                           npcb.state = ATTACK1;
+                           npcb.SetCurrentAction(NULL, 0, npcb.attack1ID);
+                           npcb.frame = 0;
+                        }
+                     }
+                  }
+               }
+               break;
+            case NPCA:
+               if (myDist(npcbpos, npcapos) <= 600.0f && myDist(npcbpos, npcapos) >= 100.0f)
+               {
+                  npcb.state = RUN;
+                  npcb.SetCurrentAction(NULL, 0, npcb.runID);
+                  npcb.frame = 0;
+               }
+               else if (myDist(npcbpos, npcapos) < 100.0f)
+               {
+                  npcb.wait1++;
+                  npcbfDir[0] = npcapos[0] - npcbpos[0];
+                  npcbfDir[1] = npcapos[1] - npcbpos[1];
+                  npcb.SetDirection(npcbfDir, npcbuDir);
+                  if (npcb.wait1 % 50 == 0)
+                  {
+                     npcb.wait1++;
+                     if (npcb.wait2 % 2 == 0)
+                     {
+                        npcb.state = ATTACK2;
+                        npcb.SetCurrentAction(NULL, 0, npcb.attack2ID);
+                        npcb.frame = 0;
+                     }
+                     else
+                     {
+                        npcb.state = ATTACK1;
+                        npcb.SetCurrentAction(NULL, 0, npcb.attack1ID);
+                        npcb.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCB:
+               if (myDist(npcbpos, npcbpos) <= 600.0f && myDist(npcbpos, npcbpos) >= 100.0f)
+               {
+                  npcb.state = RUN;
+                  npcb.SetCurrentAction(NULL, 0, npcb.runID);
+                  npcb.frame = 0;
+               }
+               else if (myDist(npcbpos, npcbpos) < 100.0f)
+               {
+                  npcb.wait1++;
+                  npcbfDir[0] = npcbpos[0] - npcbpos[0];
+                  npcbfDir[1] = npcbpos[1] - npcbpos[1];
+                  npcb.SetDirection(npcbfDir, npcbuDir);
+                  if (npcb.wait1 % 50 == 0)
+                  {
+                     npcb.wait1++;
+                     if (npcb.wait2 % 2 == 0)
+                     {
+                        npcb.state = ATTACK2;
+                        npcb.SetCurrentAction(NULL, 0, npcb.attack2ID);
+                        npcb.frame = 0;
+                     }
+                     else
+                     {
+                        npcb.state = ATTACK1;
+                        npcb.SetCurrentAction(NULL, 0, npcb.attack1ID);
+                        npcb.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCC:
+               if (myDist(npcbpos, npccpos) <= 600.0f && myDist(npcbpos, npccpos) >= 100.0f)
+               {
+                  npcb.state = RUN;
+                  npcb.SetCurrentAction(NULL, 0, npcb.runID);
+                  npcb.frame = 0;
+               }
+               else if (myDist(npcbpos, npccpos) < 100.0f)
+               {
+                  npcb.wait1++;
+                  npcbfDir[0] = npccpos[0] - npcbpos[0];
+                  npcbfDir[1] = npccpos[1] - npcbpos[1];
+                  npcb.SetDirection(npcbfDir, npcbuDir);
+                  if (npcb.wait1 % 50 == 0)
+                  {
+                     npcb.wait1++;
+                     if (npcb.wait2 % 2 == 0)
+                     {
+                        npcb.state = ATTACK2;
+                        npcb.SetCurrentAction(NULL, 0, npcb.attack2ID);
+                        npcb.frame = 0;
+                     }
+                     else
+                     {
+                        npcb.state = ATTACK1;
+                        npcb.SetCurrentAction(NULL, 0, npcb.attack1ID);
+                        npcb.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCD:
+               if (myDist(npcbpos, npcdpos) <= 600.0f && myDist(npcbpos, npcdpos) >= 100.0f)
+               {
+                  npcb.state = RUN;
+                  npcb.SetCurrentAction(NULL, 0, npcb.runID);
+                  npcb.frame = 0;
+               }
+               else if (myDist(npcbpos, npcdpos) < 100.0f)
+               {
+                  npcb.wait1++;
+                  npcbfDir[0] = npcdpos[0] - npcbpos[0];
+                  npcbfDir[1] = npcdpos[1] - npcbpos[1];
+                  npcb.SetDirection(npcbfDir, npcbuDir);
+                  if (npcb.wait1 % 50 == 0)
+                  {
+                     npcb.wait1++;
+                     if (npcb.wait2 % 2 == 0)
+                     {
+                        npcb.state = ATTACK2;
+                        npcb.SetCurrentAction(NULL, 0, npcb.attack2ID);
+                        npcb.frame = 0;
+                     }
+                     else
+                     {
+                        npcb.state = ATTACK1;
+                        npcb.SetCurrentAction(NULL, 0, npcb.attack1ID);
+                        npcb.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCE:
+               if (myDist(npcbpos, npcepos) <= 600.0f && myDist(npcbpos, npcepos) >= 100.0f)
+               {
+                  npcb.state = RUN;
+                  npcb.SetCurrentAction(NULL, 0, npcb.runID);
+                  npcb.frame = 0;
+               }
+               else if (myDist(npcbpos, npcepos) < 100.0f)
+               {
+                  npcb.wait1++;
+                  npcbfDir[0] = npcepos[0] - npcbpos[0];
+                  npcbfDir[1] = npcepos[1] - npcbpos[1];
+                  npcb.SetDirection(npcbfDir, npcbuDir);
+                  if (npcb.wait1 % 50 == 0)
+                  {
+                     npcb.wait1++;
+                     if (npcb.wait2 % 2 == 0)
+                     {
+                        npcb.state = ATTACK2;
+                        npcb.SetCurrentAction(NULL, 0, npcb.attack2ID);
+                        npcb.frame = 0;
+                     }
+                     else
+                     {
+                        npcb.state = ATTACK1;
+                        npcb.SetCurrentAction(NULL, 0, npcb.attack1ID);
+                        npcb.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCF:
+               if (myDist(npcbpos, npcfpos) <= 600.0f && myDist(npcbpos, npcfpos) >= 100.0f)
+               {
+                  npcb.state = RUN;
+                  npcb.SetCurrentAction(NULL, 0, npcb.runID);
+                  npcb.frame = 0;
+               }
+               else if (myDist(npcbpos, npcfpos) < 100.0f)
+               {
+                  npcb.wait1++;
+                  npcbfDir[0] = npcfpos[0] - npcbpos[0];
+                  npcbfDir[1] = npcfpos[1] - npcbpos[1];
+                  npcb.SetDirection(npcbfDir, npcbuDir);
+                  if (npcb.wait1 % 50 == 0)
+                  {
+                     npcb.wait1++;
+                     if (npcb.wait2 % 2 == 0)
+                     {
+                        npcb.state = ATTACK2;
+                        npcb.SetCurrentAction(NULL, 0, npcb.attack2ID);
+                        npcb.frame = 0;
+                     }
+                     else
+                     {
+                        npcb.state = ATTACK1;
+                        npcb.SetCurrentAction(NULL, 0, npcb.attack1ID);
+                        npcb.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCG:
+               if (myDist(npcbpos, npcgpos) <= 600.0f && myDist(npcbpos, npcgpos) >= 100.0f)
+               {
+                  npcb.state = RUN;
+                  npcb.SetCurrentAction(NULL, 0, npcb.runID);
+                  npcb.frame = 0;
+               }
+               else if (myDist(npcbpos, npcgpos) < 100.0f)
+               {
+                  npcb.wait1++;
+                  npcbfDir[0] = npcgpos[0] - npcbpos[0];
+                  npcbfDir[1] = npcgpos[1] - npcbpos[1];
+                  npcb.SetDirection(npcbfDir, npcbuDir);
+                  if (npcb.wait1 % 50 == 0)
+                  {
+                     npcb.wait1++;
+                     if (npcb.wait2 % 2 == 0)
+                     {
+                        npcb.state = ATTACK2;
+                        npcb.SetCurrentAction(NULL, 0, npcb.attack2ID);
+                        npcb.frame = 0;
+                     }
+                     else
+                     {
+                        npcb.state = ATTACK1;
+                        npcb.SetCurrentAction(NULL, 0, npcb.attack1ID);
+                        npcb.frame = 0;
+                     }
+                  }
+               }
+               break;
+            default:
+               break;
+         }
 			break;
 		case RUN:
 		// run
 			npcb.Play(LOOP, (float) skip, FALSE, TRUE);
 
-			npcbfDir[0] = pos[0] - npcbpos[0];
-			npcbfDir[1] = pos[1] - npcbpos[1];
-			npcb.SetDirection(npcbfDir, npcbuDir);
-			npcb.MoveForward(5.0f, TRUE, FALSE, FALSE, TRUE);
-			if (myDist(pos, npcbpos) < 90.0f)
-			{
-				npcb.state = IDLE;
-				npcb.SetCurrentAction(NULL, 0, npcb.idleID);
-				npcb.frame = 0;
-			}
+			switch(npcb.target)
+         {
+            case NONE:
+               npcb.state = IDLE;
+               npcb.SetCurrentAction(NULL, 0, npcb.idleID);
+               npcb.frame = 0;
+               break;
+            case ACTOR:
+               npcbfDir[0] = pos[0] - npcbpos[0];
+               npcbfDir[1] = pos[1] - npcbpos[1];
+               npcb.SetDirection(npcbfDir, npcbuDir);
+               npcb.MoveForward(5.0f);
+               if (myDist(pos, npcbpos) < 90.0f)
+               {
+                  npcb.state = IDLE;
+                  npcb.SetCurrentAction(NULL, 0, npcb.idleID);
+                  npcb.frame = 0;
+               }
+               break;
+            case NPCA:
+               npcbfDir[0] = npcapos[0] - npcbpos[0];
+               npcbfDir[1] = npcapos[1] - npcbpos[1];
+               npcb.SetDirection(npcbfDir, npcbuDir);
+               npcb.MoveForward(5.0f);
+               if (myDist(npcapos, npcbpos) < 90.0f)
+               {
+                  npcb.state = IDLE;
+                  npcb.SetCurrentAction(NULL, 0, npcb.idleID);
+                  npcb.frame = 0;
+               }
+               break;
+            case NPCB:
+               npcbfDir[0] = npcbpos[0] - npcbpos[0];
+               npcbfDir[1] = npcbpos[1] - npcbpos[1];
+               npcb.SetDirection(npcbfDir, npcbuDir);
+               npcb.MoveForward(5.0f);
+               if (myDist(npcbpos, npcbpos) < 90.0f)
+               {
+                  npcb.state = IDLE;
+                  npcb.SetCurrentAction(NULL, 0, npcb.idleID);
+                  npcb.frame = 0;
+               }
+               break;
+            case NPCC:
+               npcbfDir[0] = npccpos[0] - npcbpos[0];
+               npcbfDir[1] = npccpos[1] - npcbpos[1];
+               npcb.SetDirection(npcbfDir, npcbuDir);
+               npcb.MoveForward(5.0f);
+               if (myDist(npccpos, npcbpos) < 90.0f)
+               {
+                  npcb.state = IDLE;
+                  npcb.SetCurrentAction(NULL, 0, npcb.idleID);
+                  npcb.frame = 0;
+               }
+               break;
+            case NPCD:
+               npcbfDir[0] = npcdpos[0] - npcbpos[0];
+               npcbfDir[1] = npcdpos[1] - npcbpos[1];
+               npcb.SetDirection(npcbfDir, npcbuDir);
+               npcb.MoveForward(5.0f);
+               if (myDist(npcdpos, npcbpos) < 90.0f)
+               {
+                  npcb.state = IDLE;
+                  npcb.SetCurrentAction(NULL, 0, npcb.idleID);
+                  npcb.frame = 0;
+               }
+               break;
+            case NPCE:
+               npcbfDir[0] = npcepos[0] - npcbpos[0];
+               npcbfDir[1] = npcepos[1] - npcbpos[1];
+               npcb.SetDirection(npcbfDir, npcbuDir);
+               npcb.MoveForward(5.0f);
+               if (myDist(npcepos, npcbpos) < 90.0f)
+               {
+                  npcb.state = IDLE;
+                  npcb.SetCurrentAction(NULL, 0, npcb.idleID);
+                  npcb.frame = 0;
+               }
+               break;
+            case NPCF:
+               npcbfDir[0] = npcfpos[0] - npcbpos[0];
+               npcbfDir[1] = npcfpos[1] - npcbpos[1];
+               npcb.SetDirection(npcbfDir, npcbuDir);
+               npcb.MoveForward(5.0f);
+               if (myDist(npcfpos, npcbpos) < 90.0f)
+               {
+                  npcb.state = IDLE;
+                  npcb.SetCurrentAction(NULL, 0, npcb.idleID);
+                  npcb.frame = 0;
+               }
+               break;
+            case NPCG:
+               npcbfDir[0] = npcgpos[0] - npcbpos[0];
+               npcbfDir[1] = npcgpos[1] - npcbpos[1];
+               npcb.SetDirection(npcbfDir, npcbuDir);
+               npcb.MoveForward(5.0f);
+               if (myDist(npcgpos, npcbpos) < 90.0f)
+               {
+                  npcb.state = IDLE;
+                  npcb.SetCurrentAction(NULL, 0, npcb.idleID);
+                  npcb.frame = 0;
+               }
+               break;
+            default:
+               break;
+         }
 			break;
 		case ATTACK1:
 		// normal attack 1 36 frames
@@ -1740,18 +3150,164 @@ void GameAI(int skip)
 
 			if (npcb.frame == 17)
 			{
-				if (actor.state != DIE)
-				{
-					if(isHit(npcbpos, pos, npcbfDir, 120.0f, 40.0f))
-					{
-						actor.blood -= 30;
-						actor.state = DAMAGE;
-						actor.SetCurrentAction(NULL, 0, heavyDamagedID);
-						actor.frame = 0;
-						attackKeyLocked = true;
-						movementKeyLocked = true;
-					}		
-				}	
+				if (npcb.isFriend)
+            {
+               if (npca.state != DIE && !npca.isFriend)
+               {
+                  if(isHit(npcbpos, npcapos, npcbfDir, 120.0f, 40.0f))
+                  {
+                     npca.blood -= 30;
+                     npca.state = DAMAGE;
+                     npca.SetCurrentAction(NULL, 0, npca.damageID);
+                     npca.frame = 0;
+                  }
+               }
+               if (npcb.state != DIE && !npcb.isFriend)
+               {
+                  if(isHit(npcbpos, npcbpos, npcbfDir, 120.0f, 40.0f))
+                  {
+                     npcb.blood -= 30;
+                     npcb.state = DAMAGE;
+                     npcb.SetCurrentAction(NULL, 0, npcb.damageID);
+                     npcb.frame = 0;
+                  }
+               }
+               if (npcc.state != DIE && !npcc.isFriend)
+               {
+                  if(isHit(npcbpos, npccpos, npcbfDir, 120.0f, 40.0f))
+                  {
+                     npcc.blood -= 30;
+                     npcc.state = DAMAGE;
+                     npcc.SetCurrentAction(NULL, 0, npcc.damageID);
+                     npcc.frame = 0;
+                  }
+               }
+               if (npcd.state != DIE && !npcd.isFriend)
+               {
+                  if(isHit(npcbpos, npcdpos, npcbfDir, 120.0f, 40.0f))
+                  {
+                     npcd.blood -= 30;
+                     npcd.state = DAMAGE;
+                     npcd.SetCurrentAction(NULL, 0, npcd.damageID);
+                     npcd.frame = 0;
+                  }
+               }
+               if (npce.state != DIE && !npce.isFriend)
+               {
+                  if(isHit(npcbpos, npcepos, npcbfDir, 120.0f, 40.0f))
+                  {
+                     npce.blood -= 30;
+                     npce.state = DAMAGE;
+                     npce.SetCurrentAction(NULL, 0, npce.damageID);
+                     npce.frame = 0;
+                  }
+               }
+               if (npcf.state != DIE && !npcf.isFriend)
+               {
+                  if(isHit(npcbpos, npcfpos, npcbfDir, 120.0f, 40.0f))
+                  {
+                     npcf.blood -= 30;
+                     npcf.state = DAMAGE;
+                     npcf.SetCurrentAction(NULL, 0, npcf.damageID);
+                     npcf.frame = 0;
+                  }
+               }
+               if (npcg.state != DIE && !npcg.isFriend)
+               {
+                  if(isHit(npcbpos, npcgpos, npcbfDir, 120.0f, 40.0f))
+                  {
+                     npcg.blood -= 30;
+                     npcg.state = DAMAGE;
+                     npcg.SetCurrentAction(NULL, 0, npcg.damageID);
+                     npcg.frame = 0;
+                  }
+               }
+            }
+            else
+            {
+               if (actor.state != DIE)
+               {
+                  if(isHit(npcbpos, pos, npcbfDir, 120.0f, 40.0f))
+                  {
+                     actor.blood -= 30;
+                     actor.state = DAMAGE;
+                     actor.SetCurrentAction(NULL, 0, heavyDamagedID);
+                     actor.frame = 0;
+                     attackKeyLocked = true;
+                     movementKeyLocked = true;
+                  }     
+               }
+               if (npca.state != DIE && npca.isFriend)
+               {
+                  if(isHit(npcbpos, npcapos, npcbfDir, 120.0f, 40.0f))
+                  {
+                     npca.blood -= 30;
+                     npca.state = DAMAGE;
+                     npca.SetCurrentAction(NULL, 0, npca.damageID);
+                     npca.frame = 0;
+                  }
+               }
+               if (npcb.state != DIE && npcb.isFriend)
+               {
+                  if(isHit(npcbpos, npcbpos, npcbfDir, 120.0f, 40.0f))
+                  {
+                     npcb.blood -= 30;
+                     npcb.state = DAMAGE;
+                     npcb.SetCurrentAction(NULL, 0, npcb.damageID);
+                     npcb.frame = 0;
+                  }
+               }
+               if (npcc.state != DIE && npcc.isFriend)
+               {
+                  if(isHit(npcbpos, npccpos, npcbfDir, 120.0f, 40.0f))
+                  {
+                     npcc.blood -= 30;
+                     npcc.state = DAMAGE;
+                     npcc.SetCurrentAction(NULL, 0, npcc.damageID);
+                     npcc.frame = 0;
+                  }
+               }
+               if (npcd.state != DIE && npcd.isFriend)
+               {
+                  if(isHit(npcbpos, npcdpos, npcbfDir, 120.0f, 40.0f))
+                  {
+                     npcd.blood -= 30;
+                     npcd.state = DAMAGE;
+                     npcd.SetCurrentAction(NULL, 0, npcd.damageID);
+                     npcd.frame = 0;
+                  }
+               }
+               if (npce.state != DIE && npce.isFriend)
+               {
+                  if(isHit(npcbpos, npcepos, npcbfDir, 120.0f, 40.0f))
+                  {
+                     npce.blood -= 30;
+                     npce.state = DAMAGE;
+                     npce.SetCurrentAction(NULL, 0, npce.damageID);
+                     npce.frame = 0;
+                  }
+               }
+               if (npcf.state != DIE && npcf.isFriend)
+               {
+                  if(isHit(npcbpos, npcfpos, npcbfDir, 120.0f, 40.0f))
+                  {
+                     npcf.blood -= 30;
+                     npcf.state = DAMAGE;
+                     npcf.SetCurrentAction(NULL, 0, npcf.damageID);
+                     npcf.frame = 0;
+                  }
+               }
+               if (npcg.state != DIE && npcg.isFriend)
+               {
+                  if(isHit(npcbpos, npcgpos, npcbfDir, 120.0f, 40.0f))
+                  {
+                     npcg.blood -= 30;
+                     npcg.state = DAMAGE;
+                     npcg.SetCurrentAction(NULL, 0, npcg.damageID);
+                     npcg.frame = 0;
+                  }
+               }
+            }	
 			}
 			if (npcb.frame == 35)
 			{
@@ -1762,6 +3318,176 @@ void GameAI(int skip)
 			break;
 		case ATTACK2:
 		// normal attack 2 26 frames
+         npcb.Play(ONCE, (float) skip, FALSE, TRUE);
+         npcb.frame++;
+
+         if (npcb.frame == 17)
+         {
+            if (npcb.isFriend)
+            {
+               if (npca.state != DIE && !npca.isFriend)
+               {
+                  if(isHit(npcbpos, npcapos, npcbfDir, 120.0f, 40.0f))
+                  {
+                     npca.blood -= 30;
+                     npca.state = DAMAGE;
+                     npca.SetCurrentAction(NULL, 0, npca.damageID);
+                     npca.frame = 0;
+                  }
+               }
+               if (npcb.state != DIE && !npcb.isFriend)
+               {
+                  if(isHit(npcbpos, npcbpos, npcbfDir, 120.0f, 40.0f))
+                  {
+                     npcb.blood -= 30;
+                     npcb.state = DAMAGE;
+                     npcb.SetCurrentAction(NULL, 0, npcb.damageID);
+                     npcb.frame = 0;
+                  }
+               }
+               if (npcc.state != DIE && !npcc.isFriend)
+               {
+                  if(isHit(npcbpos, npccpos, npcbfDir, 120.0f, 40.0f))
+                  {
+                     npcc.blood -= 30;
+                     npcc.state = DAMAGE;
+                     npcc.SetCurrentAction(NULL, 0, npcc.damageID);
+                     npcc.frame = 0;
+                  }
+               }
+               if (npcd.state != DIE && !npcd.isFriend)
+               {
+                  if(isHit(npcbpos, npcdpos, npcbfDir, 120.0f, 40.0f))
+                  {
+                     npcd.blood -= 30;
+                     npcd.state = DAMAGE;
+                     npcd.SetCurrentAction(NULL, 0, npcd.damageID);
+                     npcd.frame = 0;
+                  }
+               }
+               if (npce.state != DIE && !npce.isFriend)
+               {
+                  if(isHit(npcbpos, npcepos, npcbfDir, 120.0f, 40.0f))
+                  {
+                     npce.blood -= 30;
+                     npce.state = DAMAGE;
+                     npce.SetCurrentAction(NULL, 0, npce.damageID);
+                     npce.frame = 0;
+                  }
+               }
+               if (npcf.state != DIE && !npcf.isFriend)
+               {
+                  if(isHit(npcbpos, npcfpos, npcbfDir, 120.0f, 40.0f))
+                  {
+                     npcf.blood -= 30;
+                     npcf.state = DAMAGE;
+                     npcf.SetCurrentAction(NULL, 0, npcf.damageID);
+                     npcf.frame = 0;
+                  }
+               }
+               if (npcg.state != DIE && !npcg.isFriend)
+               {
+                  if(isHit(npcbpos, npcgpos, npcbfDir, 120.0f, 40.0f))
+                  {
+                     npcg.blood -= 30;
+                     npcg.state = DAMAGE;
+                     npcg.SetCurrentAction(NULL, 0, npcg.damageID);
+                     npcg.frame = 0;
+                  }
+               }
+            }
+            else
+            {
+               if (actor.state != DIE)
+               {
+                  if(isHit(npcbpos, pos, npcbfDir, 120.0f, 40.0f))
+                  {
+                     actor.blood -= 30;
+                     actor.state = DAMAGE;
+                     actor.SetCurrentAction(NULL, 0, heavyDamagedID);
+                     actor.frame = 0;
+                     attackKeyLocked = true;
+                     movementKeyLocked = true;
+                  }     
+               }
+               if (npca.state != DIE && npca.isFriend)
+               {
+                  if(isHit(npcbpos, npcapos, npcbfDir, 120.0f, 40.0f))
+                  {
+                     npca.blood -= 30;
+                     npca.state = DAMAGE;
+                     npca.SetCurrentAction(NULL, 0, npca.damageID);
+                     npca.frame = 0;
+                  }
+               }
+               if (npcb.state != DIE && npcb.isFriend)
+               {
+                  if(isHit(npcbpos, npcbpos, npcbfDir, 120.0f, 40.0f))
+                  {
+                     npcb.blood -= 30;
+                     npcb.state = DAMAGE;
+                     npcb.SetCurrentAction(NULL, 0, npcb.damageID);
+                     npcb.frame = 0;
+                  }
+               }
+               if (npcc.state != DIE && npcc.isFriend)
+               {
+                  if(isHit(npcbpos, npccpos, npcbfDir, 120.0f, 40.0f))
+                  {
+                     npcc.blood -= 30;
+                     npcc.state = DAMAGE;
+                     npcc.SetCurrentAction(NULL, 0, npcc.damageID);
+                     npcc.frame = 0;
+                  }
+               }
+               if (npcd.state != DIE && npcd.isFriend)
+               {
+                  if(isHit(npcbpos, npcdpos, npcbfDir, 120.0f, 40.0f))
+                  {
+                     npcd.blood -= 30;
+                     npcd.state = DAMAGE;
+                     npcd.SetCurrentAction(NULL, 0, npcd.damageID);
+                     npcd.frame = 0;
+                  }
+               }
+               if (npce.state != DIE && npce.isFriend)
+               {
+                  if(isHit(npcbpos, npcepos, npcbfDir, 120.0f, 40.0f))
+                  {
+                     npce.blood -= 30;
+                     npce.state = DAMAGE;
+                     npce.SetCurrentAction(NULL, 0, npce.damageID);
+                     npce.frame = 0;
+                  }
+               }
+               if (npcf.state != DIE && npcf.isFriend)
+               {
+                  if(isHit(npcbpos, npcfpos, npcbfDir, 120.0f, 40.0f))
+                  {
+                     npcf.blood -= 30;
+                     npcf.state = DAMAGE;
+                     npcf.SetCurrentAction(NULL, 0, npcf.damageID);
+                     npcf.frame = 0;
+                  }
+               }
+               if (npcg.state != DIE && npcg.isFriend)
+               {
+                  if(isHit(npcbpos, npcgpos, npcbfDir, 120.0f, 40.0f))
+                  {
+                     npcg.blood -= 30;
+                     npcg.state = DAMAGE;
+                     npcg.SetCurrentAction(NULL, 0, npcg.damageID);
+                     npcg.frame = 0;
+                  }
+               }
+            }  
+         }
+         if (npcb.frame == 25)
+         {
+            npcb.state = IDLE;
+            npcb.SetCurrentAction(NULL, 0, npcb.idleID); 
+            npcb.frame = 0;
+         }
 			break;
 		case DAMAGE:
 		// damage1 16 frames
@@ -1785,11 +3511,11 @@ void GameAI(int skip)
 	npcb.BB();
 
 	/*------------------------------------------
-	 ||||    || |||||||||   ||||||||  
-	 || ||   || ||      || ||      || 
-	 ||  ||  || |||||||||  ||         c
-	 ||   || || ||         ||      || 
-	 ||    |||| ||          ||||||||  
+	 ||||    || |||||||||   ||||||||   ||||||||
+	 || ||   || ||      || ||      || ||      ||
+	 ||  ||  || |||||||||  ||         ||
+	 ||   || || ||         ||      || ||      ||
+	 ||    |||| ||          ||||||||   ||||||||
 	 ------------------------------------------*/
 
 	if (npcc.blood <= 0 && npcc.state != DIE)
@@ -1797,6 +3523,147 @@ void GameAI(int skip)
 		npcc.state = DIE;
 		npcc.SetCurrentAction(NULL, 0, npcc.dieID);
 	}
+
+   if (npcc.state != DIE)
+   {
+      if (npcc.isFriend)
+      {
+         if ((teammateID[0] == NPCC && isFollow[0]) || (teammateID[1] == NPCC && isFollow[1]))
+         {
+            npcc.target = ACTOR;
+         }
+         else
+         {
+            switch(npcc.target)
+            {
+               case NONE:
+                  npcc.target = nearestEnemy(NPCC, npccpos);
+                  if (npcc.target == NONE)
+                  {
+                     npcc.target = ACTOR;
+                  }
+                  break;
+               case ACTOR:
+                  if (actor.state == DIE)
+                  {
+                     npcc.target = NONE;
+                  }
+                  if ((teammateID[0] == NPCC && !isFollow[0]) || (teammateID[1] == NPCC && !isFollow[1]))
+                  {
+                     npcc.target = nearestEnemy(NPCC, npccpos);
+                     if (npcc.target == NONE)
+                     {
+                        npcc.target = ACTOR;
+                     }
+                  }
+                  break;
+               case NPCA:
+                  if (npca.state == DIE)
+                  {
+                     npcc.target = NONE;
+                  }
+                  break;
+               case NPCB:
+                  if (npcb.state == DIE)
+                  {
+                     npcc.target = NONE;
+                  }
+                  break;
+               case NPCC:
+                  if (npcc.state == DIE)
+                  {
+                     npcc.target = NONE;
+                  }
+                  break;
+               case NPCD:
+                  if (npcd.state == DIE)
+                  {
+                     npcc.target = NONE;
+                  }
+                  break;
+               case NPCE:
+                  if (npce.state == DIE)
+                  {
+                     npcc.target = NONE;
+                  }
+                  break;
+               case NPCF:
+                  if (npcf.state == DIE)
+                  {
+                     npcc.target = NONE;
+                  }
+                  break;
+               case NPCG:
+                  if (npcg.state == DIE)
+                  {
+                     npcc.target = NONE;
+                  }
+                  break;
+               default:
+                  break;
+            }
+         }
+      }
+      else
+      {
+         switch(npcc.target)
+         {
+            case NONE:
+               npcc.target = nearestFriend(NPCC, npccpos);
+               break;
+            case ACTOR:
+               if (actor.state == DIE)
+               {
+                  npcc.target = NONE;
+               }
+               break;
+            case NPCA:
+               if (npca.state == DIE)
+               {
+                  npcc.target = NONE;
+               }
+               break;
+            case NPCB:
+               if (npcb.state == DIE)
+               {
+                  npcc.target = NONE;
+               }
+               break;
+            case NPCC:
+               if (npcc.state == DIE)
+               {
+                  npcc.target = NONE;
+               }
+               break;
+            case NPCD:
+               if (npcd.state == DIE)
+               {
+                  npcc.target = NONE;
+               }
+               break;
+            case NPCE:
+               if (npce.state == DIE)
+               {
+                  npcc.target = NONE;
+               }
+               break;
+            case NPCF:
+               if (npcf.state == DIE)
+               {
+                  npcc.target = NONE;
+               }
+               break;
+            case NPCG:
+               if (npcg.state == DIE)
+               {
+                  npcc.target = NONE;
+               }
+               break;
+            default:
+               break;
+         }
+      }
+   }
 
 	/*
 		npcc.state:
@@ -1812,40 +3679,382 @@ void GameAI(int skip)
 		case IDLE:
 		// combat idle
 			npcc.Play(LOOP, (float) skip, FALSE, TRUE);
-			if (myDist(pos, npccpos) <= 1000.0f && myDist(pos, npccpos) >= 100.0f)
-			{
-				npcc.state = RUN;
-				npcc.SetCurrentAction(NULL, 0, npcc.runID);
-				npcc.frame = 0;
-			}
-			else if (myDist(pos, npccpos) < 100.0f  && actor.state != DIE)
-			{
-				npcc.wait++;
-				npccfDir[0] = pos[0] - npccpos[0];
-				npccfDir[1] = pos[1] - npccpos[1];
-				npcc.SetDirection(npccfDir, npccuDir);
-				if (npcc.wait == 50)
-				{
-					npcc.state = ATTACK1;
-					npcc.SetCurrentAction(NULL, 0, npcc.attack1ID);
-					npcc.frame = 0;
-					npcc.wait = 0;
-				}
-			}
+			switch (npcc.target)
+         {
+            case NONE:
+               break;
+            case ACTOR:
+               if (npcc.isFriend)
+               {
+                  if (myDist(pos, npccpos) >= 100.0f)
+                  {
+                     npcc.state = RUN;
+                     npcc.SetCurrentAction(NULL, 0, npcc.runID);
+                     npcc.frame = 0;
+                  }
+               }
+               else
+               {
+                  if (myDist(pos, npccpos) <= 500.0f && myDist(pos, npccpos) >= 100.0f)
+                  {  
+                     npcc.state = RUN;
+                     npcc.SetCurrentAction(NULL, 0, npcc.runID);
+                     npcc.frame = 0;
+                  }
+                  else if (myDist(pos, npccpos) < 100.0f  && actor.state != DIE)
+                  {
+                     npcc.wait1++;
+                     npccfDir[0] = pos[0] - npccpos[0];
+                     npccfDir[1] = pos[1] - npccpos[1];
+                     npcc.SetDirection(npccfDir, npccuDir);
+                     if (npcc.wait1 % 50 == 0)
+                     {
+                        npcc.wait2++;
+                        if (npcc.wait2 % 2 == 0)
+                        {
+                           npcc.state = ATTACK2;
+                           npcc.SetCurrentAction(NULL, 0, npcc.attack2ID);
+                           npcc.frame = 0;
+                        }
+                        else
+                        {
+                           npcc.state = ATTACK1;
+                           npcc.SetCurrentAction(NULL, 0, npcc.attack1ID);
+                           npcc.frame = 0;
+                        }
+                     }
+                  }
+               }
+               break;
+            case NPCA:
+               if (myDist(npccpos, npcapos) <= 600.0f && myDist(npccpos, npcapos) >= 100.0f)
+               {
+                  npcc.state = RUN;
+                  npcc.SetCurrentAction(NULL, 0, npcc.runID);
+                  npcc.frame = 0;
+               }
+               else if (myDist(npccpos, npcapos) < 100.0f)
+               {
+                  npcc.wait1++;
+                  npccfDir[0] = npcapos[0] - npccpos[0];
+                  npccfDir[1] = npcapos[1] - npccpos[1];
+                  npcc.SetDirection(npccfDir, npccuDir);
+                  if (npcc.wait1 % 50 == 0)
+                  {
+                     npcc.wait1++;
+                     if (npcc.wait2 % 2 == 0)
+                     {
+                        npcc.state = ATTACK2;
+                        npcc.SetCurrentAction(NULL, 0, npcc.attack2ID);
+                        npcc.frame = 0;
+                     }
+                     else
+                     {
+                        npcc.state = ATTACK1;
+                        npcc.SetCurrentAction(NULL, 0, npcc.attack1ID);
+                        npcc.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCB:
+               if (myDist(npccpos, npcbpos) <= 600.0f && myDist(npccpos, npcbpos) >= 100.0f)
+               {
+                  npcc.state = RUN;
+                  npcc.SetCurrentAction(NULL, 0, npcc.runID);
+                  npcc.frame = 0;
+               }
+               else if (myDist(npccpos, npcbpos) < 100.0f)
+               {
+                  npcc.wait1++;
+                  npccfDir[0] = npcbpos[0] - npccpos[0];
+                  npccfDir[1] = npcbpos[1] - npccpos[1];
+                  npcc.SetDirection(npccfDir, npccuDir);
+                  if (npcc.wait1 % 50 == 0)
+                  {
+                     npcc.wait1++;
+                     if (npcc.wait2 % 2 == 0)
+                     {
+                        npcc.state = ATTACK2;
+                        npcc.SetCurrentAction(NULL, 0, npcc.attack2ID);
+                        npcc.frame = 0;
+                     }
+                     else
+                     {
+                        npcc.state = ATTACK1;
+                        npcc.SetCurrentAction(NULL, 0, npcc.attack1ID);
+                        npcc.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCC:
+               if (myDist(npccpos, npccpos) <= 600.0f && myDist(npccpos, npccpos) >= 100.0f)
+               {
+                  npcc.state = RUN;
+                  npcc.SetCurrentAction(NULL, 0, npcc.runID);
+                  npcc.frame = 0;
+               }
+               else if (myDist(npccpos, npccpos) < 100.0f)
+               {
+                  npcc.wait1++;
+                  npccfDir[0] = npccpos[0] - npccpos[0];
+                  npccfDir[1] = npccpos[1] - npccpos[1];
+                  npcc.SetDirection(npccfDir, npccuDir);
+                  if (npcc.wait1 % 50 == 0)
+                  {
+                     npcc.wait1++;
+                     if (npcc.wait2 % 2 == 0)
+                     {
+                        npcc.state = ATTACK2;
+                        npcc.SetCurrentAction(NULL, 0, npcc.attack2ID);
+                        npcc.frame = 0;
+                     }
+                     else
+                     {
+                        npcc.state = ATTACK1;
+                        npcc.SetCurrentAction(NULL, 0, npcc.attack1ID);
+                        npcc.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCD:
+               if (myDist(npccpos, npcdpos) <= 600.0f && myDist(npccpos, npcdpos) >= 100.0f)
+               {
+                  npcc.state = RUN;
+                  npcc.SetCurrentAction(NULL, 0, npcc.runID);
+                  npcc.frame = 0;
+               }
+               else if (myDist(npccpos, npcdpos) < 100.0f)
+               {
+                  npcc.wait1++;
+                  npccfDir[0] = npcdpos[0] - npccpos[0];
+                  npccfDir[1] = npcdpos[1] - npccpos[1];
+                  npcc.SetDirection(npccfDir, npccuDir);
+                  if (npcc.wait1 % 50 == 0)
+                  {
+                     npcc.wait1++;
+                     if (npcc.wait2 % 2 == 0)
+                     {
+                        npcc.state = ATTACK2;
+                        npcc.SetCurrentAction(NULL, 0, npcc.attack2ID);
+                        npcc.frame = 0;
+                     }
+                     else
+                     {
+                        npcc.state = ATTACK1;
+                        npcc.SetCurrentAction(NULL, 0, npcc.attack1ID);
+                        npcc.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCE:
+               if (myDist(npccpos, npcepos) <= 600.0f && myDist(npccpos, npcepos) >= 100.0f)
+               {
+                  npcc.state = RUN;
+                  npcc.SetCurrentAction(NULL, 0, npcc.runID);
+                  npcc.frame = 0;
+               }
+               else if (myDist(npccpos, npcepos) < 100.0f)
+               {
+                  npcc.wait1++;
+                  npccfDir[0] = npcepos[0] - npccpos[0];
+                  npccfDir[1] = npcepos[1] - npccpos[1];
+                  npcc.SetDirection(npccfDir, npccuDir);
+                  if (npcc.wait1 % 50 == 0)
+                  {
+                     npcc.wait1++;
+                     if (npcc.wait2 % 2 == 0)
+                     {
+                        npcc.state = ATTACK2;
+                        npcc.SetCurrentAction(NULL, 0, npcc.attack2ID);
+                        npcc.frame = 0;
+                     }
+                     else
+                     {
+                        npcc.state = ATTACK1;
+                        npcc.SetCurrentAction(NULL, 0, npcc.attack1ID);
+                        npcc.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCF:
+               if (myDist(npccpos, npcfpos) <= 600.0f && myDist(npccpos, npcfpos) >= 100.0f)
+               {
+                  npcc.state = RUN;
+                  npcc.SetCurrentAction(NULL, 0, npcc.runID);
+                  npcc.frame = 0;
+               }
+               else if (myDist(npccpos, npcfpos) < 100.0f)
+               {
+                  npcc.wait1++;
+                  npccfDir[0] = npcfpos[0] - npccpos[0];
+                  npccfDir[1] = npcfpos[1] - npccpos[1];
+                  npcc.SetDirection(npccfDir, npccuDir);
+                  if (npcc.wait1 % 50 == 0)
+                  {
+                     npcc.wait1++;
+                     if (npcc.wait2 % 2 == 0)
+                     {
+                        npcc.state = ATTACK2;
+                        npcc.SetCurrentAction(NULL, 0, npcc.attack2ID);
+                        npcc.frame = 0;
+                     }
+                     else
+                     {
+                        npcc.state = ATTACK1;
+                        npcc.SetCurrentAction(NULL, 0, npcc.attack1ID);
+                        npcc.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCG:
+               if (myDist(npccpos, npcgpos) <= 600.0f && myDist(npccpos, npcgpos) >= 100.0f)
+               {
+                  npcc.state = RUN;
+                  npcc.SetCurrentAction(NULL, 0, npcc.runID);
+                  npcc.frame = 0;
+               }
+               else if (myDist(npccpos, npcgpos) < 100.0f)
+               {
+                  npcc.wait1++;
+                  npccfDir[0] = npcgpos[0] - npccpos[0];
+                  npccfDir[1] = npcgpos[1] - npccpos[1];
+                  npcc.SetDirection(npccfDir, npccuDir);
+                  if (npcc.wait1 % 50 == 0)
+                  {
+                     npcc.wait1++;
+                     if (npcc.wait2 % 2 == 0)
+                     {
+                        npcc.state = ATTACK2;
+                        npcc.SetCurrentAction(NULL, 0, npcc.attack2ID);
+                        npcc.frame = 0;
+                     }
+                     else
+                     {
+                        npcc.state = ATTACK1;
+                        npcc.SetCurrentAction(NULL, 0, npcc.attack1ID);
+                        npcc.frame = 0;
+                     }
+                  }
+               }
+               break;
+            default:
+               break;
+         }
 			break;
 		case RUN:
 		// run
-			npcc.Play(LOOP, (float) skip, FALSE, TRUE);
-			npccfDir[0] = pos[0] - npccpos[0];
-			npccfDir[1] = pos[1] - npccpos[1];
-			npcc.SetDirection(npccfDir, npccuDir);
-			npcc.MoveForward(5.0f, TRUE, FALSE, FALSE, TRUE);
-			if (myDist(pos, npccpos) < 90.0f)
-			{
-				npcc.state = IDLE;
-				npcc.SetCurrentAction(NULL, 0, npcc.idleID);
-				npcc.frame = 0;
-			}
+			switch(npcc.target)
+         {
+            case NONE:
+               npcc.state = IDLE;
+               npcc.SetCurrentAction(NULL, 0, npcc.idleID);
+               npcc.frame = 0;
+               break;
+            case ACTOR:
+               npccfDir[0] = pos[0] - npccpos[0];
+               npccfDir[1] = pos[1] - npccpos[1];
+               npcc.SetDirection(npccfDir, npccuDir);
+               npcc.MoveForward(5.0f);
+               if (myDist(pos, npccpos) < 90.0f)
+               {
+                  npcc.state = IDLE;
+                  npcc.SetCurrentAction(NULL, 0, npcc.idleID);
+                  npcc.frame = 0;
+               }
+               break;
+            case NPCA:
+               npccfDir[0] = npcapos[0] - npccpos[0];
+               npccfDir[1] = npcapos[1] - npccpos[1];
+               npcc.SetDirection(npccfDir, npccuDir);
+               npcc.MoveForward(5.0f);
+               if (myDist(npcapos, npccpos) < 90.0f)
+               {
+                  npcc.state = IDLE;
+                  npcc.SetCurrentAction(NULL, 0, npcc.idleID);
+                  npcc.frame = 0;
+               }
+               break;
+            case NPCB:
+               npccfDir[0] = npcbpos[0] - npccpos[0];
+               npccfDir[1] = npcbpos[1] - npccpos[1];
+               npcc.SetDirection(npccfDir, npccuDir);
+               npcc.MoveForward(5.0f);
+               if (myDist(npcbpos, npccpos) < 90.0f)
+               {
+                  npcc.state = IDLE;
+                  npcc.SetCurrentAction(NULL, 0, npcc.idleID);
+                  npcc.frame = 0;
+               }
+               break;
+            case NPCC:
+               npccfDir[0] = npccpos[0] - npccpos[0];
+               npccfDir[1] = npccpos[1] - npccpos[1];
+               npcc.SetDirection(npccfDir, npccuDir);
+               npcc.MoveForward(5.0f);
+               if (myDist(npccpos, npccpos) < 90.0f)
+               {
+                  npcc.state = IDLE;
+                  npcc.SetCurrentAction(NULL, 0, npcc.idleID);
+                  npcc.frame = 0;
+               }
+               break;
+            case NPCD:
+               npccfDir[0] = npcdpos[0] - npccpos[0];
+               npccfDir[1] = npcdpos[1] - npccpos[1];
+               npcc.SetDirection(npccfDir, npccuDir);
+               npcc.MoveForward(5.0f);
+               if (myDist(npcdpos, npccpos) < 90.0f)
+               {
+                  npcc.state = IDLE;
+                  npcc.SetCurrentAction(NULL, 0, npcc.idleID);
+                  npcc.frame = 0;
+               }
+               break;
+            case NPCE:
+               npccfDir[0] = npcepos[0] - npccpos[0];
+               npccfDir[1] = npcepos[1] - npccpos[1];
+               npcc.SetDirection(npccfDir, npccuDir);
+               npcc.MoveForward(5.0f);
+               if (myDist(npcepos, npccpos) < 90.0f)
+               {
+                  npcc.state = IDLE;
+                  npcc.SetCurrentAction(NULL, 0, npcc.idleID);
+                  npcc.frame = 0;
+               }
+               break;
+            case NPCF:
+               npccfDir[0] = npcfpos[0] - npccpos[0];
+               npccfDir[1] = npcfpos[1] - npccpos[1];
+               npcc.SetDirection(npccfDir, npccuDir);
+               npcc.MoveForward(5.0f);
+               if (myDist(npcfpos, npccpos) < 90.0f)
+               {
+                  npcc.state = IDLE;
+                  npcc.SetCurrentAction(NULL, 0, npcc.idleID);
+                  npcc.frame = 0;
+               }
+               break;
+            case NPCG:
+               npccfDir[0] = npcgpos[0] - npccpos[0];
+               npccfDir[1] = npcgpos[1] - npccpos[1];
+               npcc.SetDirection(npccfDir, npccuDir);
+               npcc.MoveForward(5.0f);
+               if (myDist(npcgpos, npccpos) < 90.0f)
+               {
+                  npcc.state = IDLE;
+                  npcc.SetCurrentAction(NULL, 0, npcc.idleID);
+                  npcc.frame = 0;
+               }
+               break;
+            default:
+               break;
+         }
 			break;
 		case ATTACK1:
 		// normal attack 1 36 frames
@@ -1854,18 +4063,164 @@ void GameAI(int skip)
 
 			if (npcc.frame == 17)
 			{
-				if (actor.state != DIE)
-				{
-					if(isHit(npccpos, pos, npccfDir, 120.0f, 40.0f))
-					{
-						actor.blood -= 30;
-						actor.state = DAMAGE;
-						actor.SetCurrentAction(NULL, 0, heavyDamagedID);
-						actor.frame = 0;
-						attackKeyLocked = true;
-						movementKeyLocked = true;
-					}		
-				}	
+				if (npcc.isFriend)
+            {
+               if (npca.state != DIE && !npca.isFriend)
+               {
+                  if(isHit(npccpos, npcapos, npccfDir, 120.0f, 40.0f))
+                  {
+                     npca.blood -= 30;
+                     npca.state = DAMAGE;
+                     npca.SetCurrentAction(NULL, 0, npca.damageID);
+                     npca.frame = 0;
+                  }
+               }
+               if (npcb.state != DIE && !npcb.isFriend)
+               {
+                  if(isHit(npccpos, npcbpos, npccfDir, 120.0f, 40.0f))
+                  {
+                     npcb.blood -= 30;
+                     npcb.state = DAMAGE;
+                     npcb.SetCurrentAction(NULL, 0, npcb.damageID);
+                     npcb.frame = 0;
+                  }
+               }
+               if (npcc.state != DIE && !npcc.isFriend)
+               {
+                  if(isHit(npccpos, npccpos, npccfDir, 120.0f, 40.0f))
+                  {
+                     npcc.blood -= 30;
+                     npcc.state = DAMAGE;
+                     npcc.SetCurrentAction(NULL, 0, npcc.damageID);
+                     npcc.frame = 0;
+                  }
+               }
+               if (npcd.state != DIE && !npcd.isFriend)
+               {
+                  if(isHit(npccpos, npcdpos, npccfDir, 120.0f, 40.0f))
+                  {
+                     npcd.blood -= 30;
+                     npcd.state = DAMAGE;
+                     npcd.SetCurrentAction(NULL, 0, npcd.damageID);
+                     npcd.frame = 0;
+                  }
+               }
+               if (npce.state != DIE && !npce.isFriend)
+               {
+                  if(isHit(npccpos, npcepos, npccfDir, 120.0f, 40.0f))
+                  {
+                     npce.blood -= 30;
+                     npce.state = DAMAGE;
+                     npce.SetCurrentAction(NULL, 0, npce.damageID);
+                     npce.frame = 0;
+                  }
+               }
+               if (npcf.state != DIE && !npcf.isFriend)
+               {
+                  if(isHit(npccpos, npcfpos, npccfDir, 120.0f, 40.0f))
+                  {
+                     npcf.blood -= 30;
+                     npcf.state = DAMAGE;
+                     npcf.SetCurrentAction(NULL, 0, npcf.damageID);
+                     npcf.frame = 0;
+                  }
+               }
+               if (npcg.state != DIE && !npcg.isFriend)
+               {
+                  if(isHit(npccpos, npcgpos, npccfDir, 120.0f, 40.0f))
+                  {
+                     npcg.blood -= 30;
+                     npcg.state = DAMAGE;
+                     npcg.SetCurrentAction(NULL, 0, npcg.damageID);
+                     npcg.frame = 0;
+                  }
+               }
+            }
+            else
+            {
+               if (actor.state != DIE)
+               {
+                  if(isHit(npccpos, pos, npccfDir, 120.0f, 40.0f))
+                  {
+                     actor.blood -= 30;
+                     actor.state = DAMAGE;
+                     actor.SetCurrentAction(NULL, 0, heavyDamagedID);
+                     actor.frame = 0;
+                     attackKeyLocked = true;
+                     movementKeyLocked = true;
+                  }     
+               }
+               if (npca.state != DIE && npca.isFriend)
+               {
+                  if(isHit(npccpos, npcapos, npccfDir, 120.0f, 40.0f))
+                  {
+                     npca.blood -= 30;
+                     npca.state = DAMAGE;
+                     npca.SetCurrentAction(NULL, 0, npca.damageID);
+                     npca.frame = 0;
+                  }
+               }
+               if (npcb.state != DIE && npcb.isFriend)
+               {
+                  if(isHit(npccpos, npcbpos, npccfDir, 120.0f, 40.0f))
+                  {
+                     npcb.blood -= 30;
+                     npcb.state = DAMAGE;
+                     npcb.SetCurrentAction(NULL, 0, npcb.damageID);
+                     npcb.frame = 0;
+                  }
+               }
+               if (npcc.state != DIE && npcc.isFriend)
+               {
+                  if(isHit(npccpos, npccpos, npccfDir, 120.0f, 40.0f))
+                  {
+                     npcc.blood -= 30;
+                     npcc.state = DAMAGE;
+                     npcc.SetCurrentAction(NULL, 0, npcc.damageID);
+                     npcc.frame = 0;
+                  }
+               }
+               if (npcd.state != DIE && npcd.isFriend)
+               {
+                  if(isHit(npccpos, npcdpos, npccfDir, 120.0f, 40.0f))
+                  {
+                     npcd.blood -= 30;
+                     npcd.state = DAMAGE;
+                     npcd.SetCurrentAction(NULL, 0, npcd.damageID);
+                     npcd.frame = 0;
+                  }
+               }
+               if (npce.state != DIE && npce.isFriend)
+               {
+                  if(isHit(npccpos, npcepos, npccfDir, 120.0f, 40.0f))
+                  {
+                     npce.blood -= 30;
+                     npce.state = DAMAGE;
+                     npce.SetCurrentAction(NULL, 0, npce.damageID);
+                     npce.frame = 0;
+                  }
+               }
+               if (npcf.state != DIE && npcf.isFriend)
+               {
+                  if(isHit(npccpos, npcfpos, npccfDir, 120.0f, 40.0f))
+                  {
+                     npcf.blood -= 30;
+                     npcf.state = DAMAGE;
+                     npcf.SetCurrentAction(NULL, 0, npcf.damageID);
+                     npcf.frame = 0;
+                  }
+               }
+               if (npcg.state != DIE && npcg.isFriend)
+               {
+                  if(isHit(npccpos, npcgpos, npccfDir, 120.0f, 40.0f))
+                  {
+                     npcg.blood -= 30;
+                     npcg.state = DAMAGE;
+                     npcg.SetCurrentAction(NULL, 0, npcg.damageID);
+                     npcg.frame = 0;
+                  }
+               }
+            }	
 			}
 			if (npcc.frame == 35)
 			{
@@ -1876,6 +4231,176 @@ void GameAI(int skip)
 			break;
 		case ATTACK2:
 		// normal attack 2 26 frames
+         npcc.Play(ONCE, (float) skip, FALSE, TRUE);
+         npcc.frame++;
+
+         if (npcc.frame == 17)
+         {
+            if (npcc.isFriend)
+            {
+               if (npca.state != DIE && !npca.isFriend)
+               {
+                  if(isHit(npccpos, npcapos, npccfDir, 120.0f, 40.0f))
+                  {
+                     npca.blood -= 30;
+                     npca.state = DAMAGE;
+                     npca.SetCurrentAction(NULL, 0, npca.damageID);
+                     npca.frame = 0;
+                  }
+               }
+               if (npcb.state != DIE && !npcb.isFriend)
+               {
+                  if(isHit(npccpos, npcbpos, npccfDir, 120.0f, 40.0f))
+                  {
+                     npcb.blood -= 30;
+                     npcb.state = DAMAGE;
+                     npcb.SetCurrentAction(NULL, 0, npcb.damageID);
+                     npcb.frame = 0;
+                  }
+               }
+               if (npcc.state != DIE && !npcc.isFriend)
+               {
+                  if(isHit(npccpos, npccpos, npccfDir, 120.0f, 40.0f))
+                  {
+                     npcc.blood -= 30;
+                     npcc.state = DAMAGE;
+                     npcc.SetCurrentAction(NULL, 0, npcc.damageID);
+                     npcc.frame = 0;
+                  }
+               }
+               if (npcd.state != DIE && !npcd.isFriend)
+               {
+                  if(isHit(npccpos, npcdpos, npccfDir, 120.0f, 40.0f))
+                  {
+                     npcd.blood -= 30;
+                     npcd.state = DAMAGE;
+                     npcd.SetCurrentAction(NULL, 0, npcd.damageID);
+                     npcd.frame = 0;
+                  }
+               }
+               if (npce.state != DIE && !npce.isFriend)
+               {
+                  if(isHit(npccpos, npcepos, npccfDir, 120.0f, 40.0f))
+                  {
+                     npce.blood -= 30;
+                     npce.state = DAMAGE;
+                     npce.SetCurrentAction(NULL, 0, npce.damageID);
+                     npce.frame = 0;
+                  }
+               }
+               if (npcf.state != DIE && !npcf.isFriend)
+               {
+                  if(isHit(npccpos, npcfpos, npccfDir, 120.0f, 40.0f))
+                  {
+                     npcf.blood -= 30;
+                     npcf.state = DAMAGE;
+                     npcf.SetCurrentAction(NULL, 0, npcf.damageID);
+                     npcf.frame = 0;
+                  }
+               }
+               if (npcg.state != DIE && !npcg.isFriend)
+               {
+                  if(isHit(npccpos, npcgpos, npccfDir, 120.0f, 40.0f))
+                  {
+                     npcg.blood -= 30;
+                     npcg.state = DAMAGE;
+                     npcg.SetCurrentAction(NULL, 0, npcg.damageID);
+                     npcg.frame = 0;
+                  }
+               }
+            }
+            else
+            {
+               if (actor.state != DIE)
+               {
+                  if(isHit(npccpos, pos, npccfDir, 120.0f, 40.0f))
+                  {
+                     actor.blood -= 30;
+                     actor.state = DAMAGE;
+                     actor.SetCurrentAction(NULL, 0, heavyDamagedID);
+                     actor.frame = 0;
+                     attackKeyLocked = true;
+                     movementKeyLocked = true;
+                  }     
+               }
+               if (npca.state != DIE && npca.isFriend)
+               {
+                  if(isHit(npccpos, npcapos, npccfDir, 120.0f, 40.0f))
+                  {
+                     npca.blood -= 30;
+                     npca.state = DAMAGE;
+                     npca.SetCurrentAction(NULL, 0, npca.damageID);
+                     npca.frame = 0;
+                  }
+               }
+               if (npcb.state != DIE && npcb.isFriend)
+               {
+                  if(isHit(npccpos, npcbpos, npccfDir, 120.0f, 40.0f))
+                  {
+                     npcb.blood -= 30;
+                     npcb.state = DAMAGE;
+                     npcb.SetCurrentAction(NULL, 0, npcb.damageID);
+                     npcb.frame = 0;
+                  }
+               }
+               if (npcc.state != DIE && npcc.isFriend)
+               {
+                  if(isHit(npccpos, npccpos, npccfDir, 120.0f, 40.0f))
+                  {
+                     npcc.blood -= 30;
+                     npcc.state = DAMAGE;
+                     npcc.SetCurrentAction(NULL, 0, npcc.damageID);
+                     npcc.frame = 0;
+                  }
+               }
+               if (npcd.state != DIE && npcd.isFriend)
+               {
+                  if(isHit(npccpos, npcdpos, npccfDir, 120.0f, 40.0f))
+                  {
+                     npcd.blood -= 30;
+                     npcd.state = DAMAGE;
+                     npcd.SetCurrentAction(NULL, 0, npcd.damageID);
+                     npcd.frame = 0;
+                  }
+               }
+               if (npce.state != DIE && npce.isFriend)
+               {
+                  if(isHit(npccpos, npcepos, npccfDir, 120.0f, 40.0f))
+                  {
+                     npce.blood -= 30;
+                     npce.state = DAMAGE;
+                     npce.SetCurrentAction(NULL, 0, npce.damageID);
+                     npce.frame = 0;
+                  }
+               }
+               if (npcf.state != DIE && npcf.isFriend)
+               {
+                  if(isHit(npccpos, npcfpos, npccfDir, 120.0f, 40.0f))
+                  {
+                     npcf.blood -= 30;
+                     npcf.state = DAMAGE;
+                     npcf.SetCurrentAction(NULL, 0, npcf.damageID);
+                     npcf.frame = 0;
+                  }
+               }
+               if (npcg.state != DIE && npcg.isFriend)
+               {
+                  if(isHit(npccpos, npcgpos, npccfDir, 120.0f, 40.0f))
+                  {
+                     npcg.blood -= 30;
+                     npcg.state = DAMAGE;
+                     npcg.SetCurrentAction(NULL, 0, npcg.damageID);
+                     npcg.frame = 0;
+                  }
+               }
+            }  
+         }
+         if (npcc.frame == 25)
+         {
+            npcc.state = IDLE;
+            npcc.SetCurrentAction(NULL, 0, npcc.idleID); 
+            npcc.frame = 0;
+         }
 			break;
 		case DAMAGE:
 		// damage1 16 frames
@@ -1899,11 +4424,11 @@ void GameAI(int skip)
 	npcc.BB();
 
 	/*------------------------------------------
-	 ||||    || |||||||||   ||||||||  
-	 || ||   || ||      || ||      || 
-	 ||  ||  || |||||||||  ||         d
-	 ||   || || ||         ||      || 
-	 ||    |||| ||          ||||||||  
+	 ||||    || |||||||||   ||||||||  ||||||||
+	 || ||   || ||      || ||      || ||      ||
+	 ||  ||  || |||||||||  ||         ||      ||
+	 ||   || || ||         ||      || ||      ||
+	 ||    |||| ||          ||||||||  ||||||||
 	 ------------------------------------------*/
 
 	if (npcd.blood <= 0 && npcd.state != DIE)
@@ -1911,6 +4436,148 @@ void GameAI(int skip)
 		npcd.state = DIE;
 		npcd.SetCurrentAction(NULL, 0, npcd.dieID);
 	}
+
+   
+if (npcd.state != DIE)
+{
+   if (npcd.isFriend)
+   {
+      if ((teammateID[0] == NPCD && isFollow[0]) || (teammateID[1] == NPCD && isFollow[1]))
+      {
+         npcd.target = ACTOR;
+      }
+      else
+      {
+         switch(npcd.target)
+         {
+            case NONE:
+               npcd.target = nearestEnemy(NPCD, npcdpos);
+               if (npcd.target == NONE)
+               {
+                  npcd.target = ACTOR;
+               }
+               break;
+            case ACTOR:
+               if (actor.state == DIE)
+               {
+                  npcd.target = NONE;
+               }
+               if ((teammateID[0] == NPCD && !isFollow[0]) || (teammateID[1] == NPCD && !isFollow[1]))
+               {
+                  npcd.target = nearestEnemy(NPCD, npcdpos);
+                  if (npcd.target == NONE)
+                  {
+                     npcd.target = ACTOR;
+                  }
+               }
+               break;
+            case NPCA:
+               if (npca.state == DIE)
+               {
+                  npcd.target = NONE;
+               }
+               break;
+            case NPCB:
+               if (npcb.state == DIE)
+               {
+                  npcd.target = NONE;
+               }
+               break;
+            case NPCC:
+               if (npcc.state == DIE)
+               {
+                  npcd.target = NONE;
+               }
+               break;
+            case NPCD:
+               if (npcd.state == DIE)
+               {
+                  npcd.target = NONE;
+               }
+               break;
+            case NPCE:
+               if (npce.state == DIE)
+               {
+                  npcd.target = NONE;
+               }
+               break;
+            case NPCF:
+               if (npcf.state == DIE)
+               {
+                  npcd.target = NONE;
+               }
+               break;
+            case NPCG:
+               if (npcg.state == DIE)
+               {
+                  npcd.target = NONE;
+               }
+               break;
+            default:
+               break;
+         }
+      }
+   }
+   else
+   {
+      switch(npcd.target)
+      {
+         case NONE:
+            npcd.target = nearestFriend(NPCD, npcdpos);
+            break;
+         case ACTOR:
+            if (actor.state == DIE)
+            {
+               npcd.target = NONE;
+            }
+            break;
+         case NPCA:
+            if (npca.state == DIE)
+            {
+               npcd.target = NONE;
+            }
+            break;
+         case NPCB:
+            if (npcb.state == DIE)
+            {
+               npcd.target = NONE;
+            }
+            break;
+         case NPCC:
+            if (npcc.state == DIE)
+            {
+               npcd.target = NONE;
+            }
+            break;
+         case NPCD:
+            if (npcd.state == DIE)
+            {
+               npcd.target = NONE;
+            }
+            break;
+         case NPCE:
+            if (npce.state == DIE)
+            {
+               npcd.target = NONE;
+            }
+            break;
+         case NPCF:
+            if (npcf.state == DIE)
+            {
+               npcd.target = NONE;
+            }
+            break;
+         case NPCG:
+            if (npcg.state == DIE)
+            {
+               npcd.target = NONE;
+            }
+            break;
+         default:
+            break;
+      }
+   }
+}
 
 	/*
 		npcd.state:
@@ -1926,466 +4593,384 @@ void GameAI(int skip)
 		case IDLE:
 		// combat idle
 			npcd.Play(LOOP, (float) skip, FALSE, TRUE);
-			if (npcd.isFriend)
-			{
-				if ((isFollow[0] && friendID[0] == NPCD) || (isFollow[1] && friendID[1] == NPCD))
-				{
-					if (myDist(pos, npcdpos) >= 100.0f)
-					{
-						npcd.state = RUN;
-						npcd.SetCurrentAction(NULL, 0, npcd.runID);
-						npcd.frame = 0;
-						npcd.target = ACTOR;
-					}
-				}
-				else if ((!isFollow[0] && friendID[0] == NPCD) || (!isFollow[1] && friendID[1] == NPCD))
-				{
-					if (myDist(npcdpos, npcapos) <= 1000.0f && myDist(npcdpos, npcapos) >= 100.0f && npca.state != DIE && !npca.isFriend)
-					{
-						npcd.state = RUN;
-						npcd.SetCurrentAction(NULL, 0, npcd.runID);
-						npcd.frame = 0;
-						npcd.target = NPCA;
-					}
-					else if (myDist(npcdpos, npcapos) < 100.0f  && npca.state != DIE && !npca.isFriend)
-					{
-						npcd.wait++;
-						npcdfDir[0] = npcapos[0] - npcdpos[0];
-						npcdfDir[1] = npcapos[1] - npcdpos[1];
-						npcd.SetDirection(npcdfDir, npcduDir);
-						if (npcd.wait == 50)
-						{
-							npcd.state = ATTACK1;
-							npcd.SetCurrentAction(NULL, 0, npcd.attack1ID);
-							npcd.frame = 0;
-							npcd.target = NPCA;
-							npcd.wait = 0;
-						}
-					}
-					else if (myDist(npcdpos, npcbpos) <= 1000.0f && myDist(npcdpos, npcbpos) >= 100.0f && npcb.state != DIE && !npcb.isFriend)
-					{
-						npcd.state = RUN;
-						npcd.SetCurrentAction(NULL, 0, npcd.runID);
-						npcd.frame = 0;
-						npcd.target = NPCB;
-					}
-					else if (myDist(npcdpos, npcbpos) < 100.0f  && npcb.state != DIE && !npcb.isFriend)
-					{
-						npcd.wait++;
-						npcdfDir[0] = npcbpos[0] - npcdpos[0];
-						npcdfDir[1] = npcbpos[1] - npcdpos[1];
-						npcd.SetDirection(npcdfDir, npcduDir);
-						if (npcd.wait == 50)
-						{
-							npcd.state = ATTACK1;
-							npcd.SetCurrentAction(NULL, 0, npcd.attack1ID);
-							npcd.frame = 0;
-							npcd.target = NPCB;
-							npcd.wait = 0;
-						}
-					}
-					else if (myDist(npcdpos, npccpos) <= 1000.0f && myDist(npcdpos, npccpos) >= 100.0f && npcc.state != DIE && !npcc.isFriend)
-					{
-						npcd.state = RUN;
-						npcd.SetCurrentAction(NULL, 0, npcd.runID);
-						npcd.frame = 0;
-						npcd.target = NPCC;
-					}
-					else if (myDist(npcdpos, npccpos) < 100.0f  && npcc.state != DIE && !npcc.isFriend)
-					{
-						npcd.wait++;
-						npcdfDir[0] = npccpos[0] - npcdpos[0];
-						npcdfDir[1] = npccpos[1] - npcdpos[1];
-						npcd.SetDirection(npcdfDir, npcduDir);
-						if (npcd.wait == 50)
-						{
-							npcd.state = ATTACK1;
-							npcd.SetCurrentAction(NULL, 0, npcd.attack1ID);
-							npcd.frame = 0;
-							npcd.target = NPCC;
-							npcd.wait = 0;
-						}
-					}
-					else if (myDist(npcdpos, npcepos) <= 1000.0f && myDist(npcdpos, npcepos) >= 100.0f && npce.state != DIE && !npce.isFriend)
-					{
-						npcd.state = RUN;
-						npcd.SetCurrentAction(NULL, 0, npcd.runID);
-						npcd.frame = 0;
-						npcd.target = NPCE;
-					}
-					else if (myDist(npcdpos, npcepos) < 100.0f  && npce.state != DIE && !npce.isFriend)
-					{
-						npcd.wait++;
-						npcdfDir[0] = npcepos[0] - npcdpos[0];
-						npcdfDir[1] = npcepos[1] - npcdpos[1];
-						npcd.SetDirection(npcdfDir, npcduDir);
-						if (npcd.wait == 50)
-						{
-							npcd.state = ATTACK1;
-							npcd.SetCurrentAction(NULL, 0, npcd.attack1ID);
-							npcd.frame = 0;
-							npcd.target = NPCE;
-							npcd.wait = 0;
-						}
-					}
-					else if (myDist(npcdpos, npcfpos) <= 1000.0f && myDist(npcdpos, npcfpos) >= 100.0f && npcf.state != DIE && !npcf.isFriend)
-					{
-						npcd.state = RUN;
-						npcd.SetCurrentAction(NULL, 0, npcd.runID);
-						npcd.frame = 0;
-						npcd.target = NPCF;
-					}
-					else if (myDist(npcdpos, npcfpos) < 100.0f  && npcf.state != DIE && !npcf.isFriend)
-					{
-						npcd.wait++;
-						npcdfDir[0] = npcfpos[0] - npcdpos[0];
-						npcdfDir[1] = npcfpos[1] - npcdpos[1];
-						npcd.SetDirection(npcdfDir, npcduDir);
-						if (npcd.wait == 50)
-						{
-							npcd.state = ATTACK1;
-							npcd.SetCurrentAction(NULL, 0, npcd.attack1ID);
-							npcd.frame = 0;
-							npcd.target = NPCF;
-							npcd.wait = 0;
-						}
-					}
-					else if (myDist(npcdpos, npcgpos) <= 1000.0f && myDist(npcdpos, npcgpos) >= 100.0f && npcg.state != DIE && !npcg.isFriend)
-					{
-						npcd.state = RUN;
-						npcd.SetCurrentAction(NULL, 0, npcd.runID);
-						npcd.frame = 0;
-						npcd.target = NPCG;
-					}
-					else if (myDist(npcdpos, npcgpos) < 100.0f  && npcg.state != DIE && !npcg.isFriend)
-					{
-						npcd.wait++;
-						npcdfDir[0] = npcgpos[0] - npcdpos[0];
-						npcdfDir[1] = npcgpos[1] - npcdpos[1];
-						npcd.SetDirection(npcdfDir, npcduDir);
-						if (npcd.wait == 50)
-						{
-							npcd.state = ATTACK1;
-							npcd.SetCurrentAction(NULL, 0, npcd.attack1ID);
-							npcd.frame = 0;
-							npcd.target = NPCG;
-							npcd.wait = 0;
-						}
-					}
-					else if (myDist(pos, npcdpos) >= 100.0f)
-					{
-						npcd.state = RUN;
-						npcd.SetCurrentAction(NULL, 0, npcd.runID);
-						npcd.frame = 0;
-						npcd.target = ACTOR;
-					}
-				}
-			}
-			else
-			{
-				if (myDist(npcdpos, npcapos) <= 1000.0f && myDist(npcdpos, npcapos) >= 100.0f && npca.state != DIE && npca.isFriend)
-					{
-						npcd.state = RUN;
-						npcd.SetCurrentAction(NULL, 0, npcd.runID);
-						npcd.frame = 0;
-						npcd.target = NPCA;
-					}
-					else if (myDist(npcdpos, npcapos) < 100.0f  && npca.state != DIE && npca.isFriend)
-					{
-						npcd.wait++;
-						npcdfDir[0] = npcapos[0] - npcdpos[0];
-						npcdfDir[1] = npcapos[1] - npcdpos[1];
-						npcd.SetDirection(npcdfDir, npcduDir);
-						if (npcd.wait == 50)
-						{
-							npcd.state = ATTACK1;
-							npcd.SetCurrentAction(NULL, 0, npcd.attack1ID);
-							npcd.frame = 0;
-							npcd.target = NPCA;
-							npcd.wait = 0;
-						}
-					}
-					else if (myDist(npcdpos, npcbpos) <= 1000.0f && myDist(npcdpos, npcbpos) >= 100.0f && npcb.state != DIE && npcb.isFriend)
-					{
-						npcd.state = RUN;
-						npcd.SetCurrentAction(NULL, 0, npcd.runID);
-						npcd.frame = 0;
-						npcd.target = NPCB;
-					}
-					else if (myDist(npcdpos, npcbpos) < 100.0f  && npcb.state != DIE && npcb.isFriend)
-					{
-						npcd.wait++;
-						npcdfDir[0] = npcbpos[0] - npcdpos[0];
-						npcdfDir[1] = npcbpos[1] - npcdpos[1];
-						npcd.SetDirection(npcdfDir, npcduDir);
-						if (npcd.wait == 50)
-						{
-							npcd.state = ATTACK1;
-							npcd.SetCurrentAction(NULL, 0, npcd.attack1ID);
-							npcd.frame = 0;
-							npcd.target = NPCB;
-							npcd.wait = 0;
-						}
-					}
-					else if (myDist(npcdpos, npccpos) <= 1000.0f && myDist(npcdpos, npccpos) >= 100.0f && npcc.state != DIE && npcc.isFriend)
-					{
-						npcd.state = RUN;
-						npcd.SetCurrentAction(NULL, 0, npcd.runID);
-						npcd.frame = 0;
-						npcd.target = NPCC;
-					}
-					else if (myDist(npcdpos, npccpos) < 100.0f  && npcc.state != DIE && npcc.isFriend)
-					{
-						npcd.wait++;
-						npcdfDir[0] = npccpos[0] - npcdpos[0];
-						npcdfDir[1] = npccpos[1] - npcdpos[1];
-						npcd.SetDirection(npcdfDir, npcduDir);
-						if (npcd.wait == 50)
-						{
-							npcd.state = ATTACK1;
-							npcd.SetCurrentAction(NULL, 0, npcd.attack1ID);
-							npcd.frame = 0;
-							npcd.target = NPCC;
-							npcd.wait = 0;
-						}
-					}
-					else if (myDist(npcdpos, npcepos) <= 1000.0f && myDist(npcdpos, npcepos) >= 100.0f && npce.state != DIE && npce.isFriend)
-					{
-						npcd.state = RUN;
-						npcd.SetCurrentAction(NULL, 0, npcd.runID);
-						npcd.frame = 0;
-						npcd.target = NPCE;
-					}
-					else if (myDist(npcdpos, npcepos) < 100.0f  && npce.state != DIE && npce.isFriend)
-					{
-						npcd.wait++;
-						npcdfDir[0] = npcepos[0] - npcdpos[0];
-						npcdfDir[1] = npcepos[1] - npcdpos[1];
-						npcd.SetDirection(npcdfDir, npcduDir);
-						if (npcd.wait == 50)
-						{
-							npcd.state = ATTACK1;
-							npcd.SetCurrentAction(NULL, 0, npcd.attack1ID);
-							npcd.frame = 0;
-							npcd.target = NPCE;
-							npcd.wait = 0;
-						}
-					}
-					else if (myDist(npcdpos, npcfpos) <= 1000.0f && myDist(npcdpos, npcfpos) >= 100.0f && npcf.state != DIE && npcf.isFriend)
-					{
-						npcd.state = RUN;
-						npcd.SetCurrentAction(NULL, 0, npcd.runID);
-						npcd.frame = 0;
-						npcd.target = NPCF;
-					}
-					else if (myDist(npcdpos, npcfpos) < 100.0f  && npcf.state != DIE && npcf.isFriend)
-					{
-						npcd.wait++;
-						npcdfDir[0] = npcfpos[0] - npcdpos[0];
-						npcdfDir[1] = npcfpos[1] - npcdpos[1];
-						npcd.SetDirection(npcdfDir, npcduDir);
-						if (npcd.wait == 50)
-						{
-							npcd.state = ATTACK1;
-							npcd.SetCurrentAction(NULL, 0, npcd.attack1ID);
-							npcd.frame = 0;
-							npcd.target = NPCF;
-							npcd.wait = 0;
-						}
-					}
-					else if (myDist(npcdpos, npcgpos) <= 1000.0f && myDist(npcdpos, npcgpos) >= 100.0f && npcg.state != DIE && npcg.isFriend)
-					{
-						npcd.state = RUN;
-						npcd.SetCurrentAction(NULL, 0, npcd.runID);
-						npcd.frame = 0;
-						npcd.target = NPCG;
-					}
-					else if (myDist(npcdpos, npcgpos) < 100.0f  && npcg.state != DIE && npcg.isFriend)
-					{
-						npcd.wait++;
-						npcdfDir[0] = npcgpos[0] - npcdpos[0];
-						npcdfDir[1] = npcgpos[1] - npcdpos[1];
-						npcd.SetDirection(npcdfDir, npcduDir);
-						if (npcd.wait == 50)
-						{
-							npcd.state = ATTACK1;
-							npcd.SetCurrentAction(NULL, 0, npcd.attack1ID);
-							npcd.frame = 0;
-							npcd.target = NPCG;
-							npcd.wait = 0;
-						}
-					}
-					else if (myDist(pos, npcdpos) <= 1000.0f && myDist(pos, npcdpos) >= 100.0f)
-				{
-					npcd.state = RUN;
-					npcd.SetCurrentAction(NULL, 0, npcd.runID);
-					npcd.frame = 0;
-					npcd.target = ACTOR;
-				}
-				else if (myDist(pos, npcdpos) < 100.0f  && actor.state != DIE)
-				{
-					npcd.wait++;
-					npcdfDir[0] = pos[0] - npcdpos[0];
-					npcdfDir[1] = pos[1] - npcdpos[1];
-					npcd.SetDirection(npcdfDir, npcduDir);
-					if (npcd.wait == 50)
-					{
-						npcd.state = ATTACK1;
-						npcd.SetCurrentAction(NULL, 0, npcd.attack1ID);
-						npcd.frame = 0;
-						npcd.target = ACTOR;
-						npcd.wait = 0;
-					}
-				}
-			}
-			break;
+         switch (npcd.target)
+         {
+            case NONE:
+               break;
+            case ACTOR:
+               if (npcd.isFriend)
+               {
+                  if (myDist(pos, npcdpos) >= 100.0f)
+                  {
+                     npcd.state = RUN;
+                     npcd.SetCurrentAction(NULL, 0, npcd.runID);
+                     npcd.frame = 0;
+                  }
+               }
+               else
+               {
+                  if (myDist(pos, npcdpos) <= 500.0f && myDist(pos, npcdpos) >= 100.0f)
+                  {  
+                     npcd.state = RUN;
+                     npcd.SetCurrentAction(NULL, 0, npcd.runID);
+                     npcd.frame = 0;
+                  }
+                  else if (myDist(pos, npcdpos) < 100.0f  && actor.state != DIE)
+                  {
+                     npcd.wait1++;
+                     npcdfDir[0] = pos[0] - npcdpos[0];
+                     npcdfDir[1] = pos[1] - npcdpos[1];
+                     npcd.SetDirection(npcdfDir, npcduDir);
+                     if (npcd.wait1 % 50 == 0)
+                     {
+                        npcd.wait2++;
+                        if (npcd.wait2 % 2 == 0)
+                        {
+                           npcd.state = ATTACK2;
+                           npcd.SetCurrentAction(NULL, 0, npcd.attack2ID);
+                           npcd.frame = 0;
+                        }
+                        else
+                        {
+                           npcd.state = ATTACK1;
+                           npcd.SetCurrentAction(NULL, 0, npcd.attack1ID);
+                           npcd.frame = 0;
+                        }
+                     }
+                  }
+               }
+               break;
+            case NPCA:
+               if (myDist(npcdpos, npcapos) <= 600.0f && myDist(npcdpos, npcapos) >= 100.0f)
+               {
+                  npcd.state = RUN;
+                  npcd.SetCurrentAction(NULL, 0, npcd.runID);
+                  npcd.frame = 0;
+               }
+               else if (myDist(npcdpos, npcapos) < 100.0f)
+               {
+                  npcd.wait1++;
+                  npcdfDir[0] = npcapos[0] - npcdpos[0];
+                  npcdfDir[1] = npcapos[1] - npcdpos[1];
+                  npcd.SetDirection(npcdfDir, npcduDir);
+                  if (npcd.wait1 % 50 == 0)
+                  {
+                     npcd.wait1++;
+                     if (npcd.wait2 % 2 == 0)
+                     {
+                        npcd.state = ATTACK2;
+                        npcd.SetCurrentAction(NULL, 0, npcd.attack2ID);
+                        npcd.frame = 0;
+                     }
+                     else
+                     {
+                        npcd.state = ATTACK1;
+                        npcd.SetCurrentAction(NULL, 0, npcd.attack1ID);
+                        npcd.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCB:
+               if (myDist(npcdpos, npcbpos) <= 600.0f && myDist(npcdpos, npcbpos) >= 100.0f)
+               {
+                  npcd.state = RUN;
+                  npcd.SetCurrentAction(NULL, 0, npcd.runID);
+                  npcd.frame = 0;
+               }
+               else if (myDist(npcdpos, npcbpos) < 100.0f)
+               {
+                  npcd.wait1++;
+                  npcdfDir[0] = npcbpos[0] - npcdpos[0];
+                  npcdfDir[1] = npcbpos[1] - npcdpos[1];
+                  npcd.SetDirection(npcdfDir, npcduDir);
+                  if (npcd.wait1 % 50 == 0)
+                  {
+                     npcd.wait1++;
+                     if (npcd.wait2 % 2 == 0)
+                     {
+                        npcd.state = ATTACK2;
+                        npcd.SetCurrentAction(NULL, 0, npcd.attack2ID);
+                        npcd.frame = 0;
+                     }
+                     else
+                     {
+                        npcd.state = ATTACK1;
+                        npcd.SetCurrentAction(NULL, 0, npcd.attack1ID);
+                        npcd.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCC:
+               if (myDist(npcdpos, npccpos) <= 600.0f && myDist(npcdpos, npccpos) >= 100.0f)
+               {
+                  npcd.state = RUN;
+                  npcd.SetCurrentAction(NULL, 0, npcd.runID);
+                  npcd.frame = 0;
+               }
+               else if (myDist(npcdpos, npccpos) < 100.0f)
+               {
+                  npcd.wait1++;
+                  npcdfDir[0] = npccpos[0] - npcdpos[0];
+                  npcdfDir[1] = npccpos[1] - npcdpos[1];
+                  npcd.SetDirection(npcdfDir, npcduDir);
+                  if (npcd.wait1 % 50 == 0)
+                  {
+                     npcd.wait1++;
+                     if (npcd.wait2 % 2 == 0)
+                     {
+                        npcd.state = ATTACK2;
+                        npcd.SetCurrentAction(NULL, 0, npcd.attack2ID);
+                        npcd.frame = 0;
+                     }
+                     else
+                     {
+                        npcd.state = ATTACK1;
+                        npcd.SetCurrentAction(NULL, 0, npcd.attack1ID);
+                        npcd.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCD:
+               if (myDist(npcdpos, npcdpos) <= 600.0f && myDist(npcdpos, npcdpos) >= 100.0f)
+               {
+                  npcd.state = RUN;
+                  npcd.SetCurrentAction(NULL, 0, npcd.runID);
+                  npcd.frame = 0;
+               }
+               else if (myDist(npcdpos, npcdpos) < 100.0f)
+               {
+                  npcd.wait1++;
+                  npcdfDir[0] = npcdpos[0] - npcdpos[0];
+                  npcdfDir[1] = npcdpos[1] - npcdpos[1];
+                  npcd.SetDirection(npcdfDir, npcduDir);
+                  if (npcd.wait1 % 50 == 0)
+                  {
+                     npcd.wait1++;
+                     if (npcd.wait2 % 2 == 0)
+                     {
+                        npcd.state = ATTACK2;
+                        npcd.SetCurrentAction(NULL, 0, npcd.attack2ID);
+                        npcd.frame = 0;
+                     }
+                     else
+                     {
+                        npcd.state = ATTACK1;
+                        npcd.SetCurrentAction(NULL, 0, npcd.attack1ID);
+                        npcd.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCE:
+               if (myDist(npcdpos, npcepos) <= 600.0f && myDist(npcdpos, npcepos) >= 100.0f)
+               {
+                  npcd.state = RUN;
+                  npcd.SetCurrentAction(NULL, 0, npcd.runID);
+                  npcd.frame = 0;
+               }
+               else if (myDist(npcdpos, npcepos) < 100.0f)
+               {
+                  npcd.wait1++;
+                  npcdfDir[0] = npcepos[0] - npcdpos[0];
+                  npcdfDir[1] = npcepos[1] - npcdpos[1];
+                  npcd.SetDirection(npcdfDir, npcduDir);
+                  if (npcd.wait1 % 50 == 0)
+                  {
+                     npcd.wait1++;
+                     if (npcd.wait2 % 2 == 0)
+                     {
+                        npcd.state = ATTACK2;
+                        npcd.SetCurrentAction(NULL, 0, npcd.attack2ID);
+                        npcd.frame = 0;
+                     }
+                     else
+                     {
+                        npcd.state = ATTACK1;
+                        npcd.SetCurrentAction(NULL, 0, npcd.attack1ID);
+                        npcd.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCF:
+               if (myDist(npcdpos, npcfpos) <= 600.0f && myDist(npcdpos, npcfpos) >= 100.0f)
+               {
+                  npcd.state = RUN;
+                  npcd.SetCurrentAction(NULL, 0, npcd.runID);
+                  npcd.frame = 0;
+               }
+               else if (myDist(npcdpos, npcfpos) < 100.0f)
+               {
+                  npcd.wait1++;
+                  npcdfDir[0] = npcfpos[0] - npcdpos[0];
+                  npcdfDir[1] = npcfpos[1] - npcdpos[1];
+                  npcd.SetDirection(npcdfDir, npcduDir);
+                  if (npcd.wait1 % 50 == 0)
+                  {
+                     npcd.wait1++;
+                     if (npcd.wait2 % 2 == 0)
+                     {
+                        npcd.state = ATTACK2;
+                        npcd.SetCurrentAction(NULL, 0, npcd.attack2ID);
+                        npcd.frame = 0;
+                     }
+                     else
+                     {
+                        npcd.state = ATTACK1;
+                        npcd.SetCurrentAction(NULL, 0, npcd.attack1ID);
+                        npcd.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCG:
+               if (myDist(npcdpos, npcgpos) <= 600.0f && myDist(npcdpos, npcgpos) >= 100.0f)
+               {
+                  npcd.state = RUN;
+                  npcd.SetCurrentAction(NULL, 0, npcd.runID);
+                  npcd.frame = 0;
+               }
+               else if (myDist(npcdpos, npcgpos) < 100.0f)
+               {
+                  npcd.wait1++;
+                  npcdfDir[0] = npcgpos[0] - npcdpos[0];
+                  npcdfDir[1] = npcgpos[1] - npcdpos[1];
+                  npcd.SetDirection(npcdfDir, npcduDir);
+                  if (npcd.wait1 % 50 == 0)
+                  {
+                     npcd.wait1++;
+                     if (npcd.wait2 % 2 == 0)
+                     {
+                        npcd.state = ATTACK2;
+                        npcd.SetCurrentAction(NULL, 0, npcd.attack2ID);
+                        npcd.frame = 0;
+                     }
+                     else
+                     {
+                        npcd.state = ATTACK1;
+                        npcd.SetCurrentAction(NULL, 0, npcd.attack1ID);
+                        npcd.frame = 0;
+                     }
+                  }
+               }
+               break;
+            default:
+               break;
+         }
+         break;
 		case RUN:
 		// run
 			npcd.Play(LOOP, (float) skip, FALSE, TRUE);
-				if ((friendID[0] == NPCD && isFollow[0]) || (friendID[1] == NPCD && isFollow[1]))
-				{
-					npcd.target = ACTOR;
-				}
-				if(npcd.target == ACTOR)
-				{
-					npcdfDir[0] = pos[0] - npcdpos[0];
-					npcdfDir[1] = pos[1] - npcdpos[1];
-					npcd.SetDirection(npcdfDir, npcduDir);
-					if (npcd.isFriend)
-					{
-						npcd.MoveForward(5.0f);
-					}
-					else
-					{
-						npcd.MoveForward(5.0f, TRUE, FALSE, FALSE, TRUE);
-					}
-					if (myDist(pos, npcdpos) < 90.0f)
-					{
-						npcd.state = IDLE;
-						npcd.SetCurrentAction(NULL, 0, npcd.idleID);
-						npcd.frame = 0;
-					}
-				}
-				else if (npcd.target == NPCA)
-				{
-					npcdfDir[0] = npcapos[0] - npcdpos[0];
-					npcdfDir[1] = npcapos[1] - npcdpos[1];
-					npcd.SetDirection(npcdfDir, npcduDir);
-					if (npcd.isFriend)
-					{
-						npcd.MoveForward(5.0f);
-					}
-					else
-					{
-						npcd.MoveForward(5.0f, TRUE, FALSE, FALSE, TRUE);
-					}
-					if (myDist(npcapos, npcdpos) < 90.0f)
-					{
-						npcd.state = IDLE;
-						npcd.SetCurrentAction(NULL, 0, npcd.idleID);
-						npcd.frame = 0;
-					}
-				}
-				else if (npcd.target == NPCB)
-				{
-					npcdfDir[0] = npcbpos[0] - npcdpos[0];
-					npcdfDir[1] = npcbpos[1] - npcdpos[1];
-					npcd.SetDirection(npcdfDir, npcduDir);
-					if (npcd.isFriend)
-					{
-						npcd.MoveForward(5.0f);
-					}
-					else
-					{
-						npcd.MoveForward(5.0f, TRUE, FALSE, FALSE, TRUE);
-					}
-					if (myDist(npcbpos, npcdpos) < 90.0f)
-					{
-						npcd.state = IDLE;
-						npcd.SetCurrentAction(NULL, 0, npcd.idleID);
-						npcd.frame = 0;
-					}
-				}
-				else if (npcd.target == NPCC)
-				{
-					npcdfDir[0] = npccpos[0] - npcdpos[0];
-					npcdfDir[1] = npccpos[1] - npcdpos[1];
-					npcd.SetDirection(npcdfDir, npcduDir);
-					if (npcd.isFriend)
-					{
-						npcd.MoveForward(5.0f);
-					}
-					else
-					{
-						npcd.MoveForward(5.0f, TRUE, FALSE, FALSE, TRUE);
-					}
-					if (myDist(npccpos, npcdpos) < 90.0f)
-					{
-						npcd.state = IDLE;
-						npcd.SetCurrentAction(NULL, 0, npcd.idleID);
-						npcd.frame = 0;
-					}
-				}
-				else if (npcd.target == NPCE)
-				{
-					npcdfDir[0] = npcepos[0] - npcdpos[0];
-					npcdfDir[1] = npcepos[1] - npcdpos[1];
-					npcd.SetDirection(npcdfDir, npcduDir);
-					if (npcd.isFriend)
-					{
-						npcd.MoveForward(5.0f);
-					}
-					else
-					{
-						npcd.MoveForward(5.0f, TRUE, FALSE, FALSE, TRUE);
-					}
-					if (myDist(npcepos, npcdpos) < 90.0f)
-					{
-						npcd.state = IDLE;
-						npcd.SetCurrentAction(NULL, 0, npcd.idleID);
-						npcd.frame = 0;
-					}
-				}
-				else if (npcd.target == NPCF)
-				{
-					npcdfDir[0] = npcfpos[0] - npcdpos[0];
-					npcdfDir[1] = npcfpos[1] - npcdpos[1];
-					npcd.SetDirection(npcdfDir, npcduDir);
-					if (npcd.isFriend)
-					{
-						npcd.MoveForward(5.0f);
-					}
-					else
-					{
-						npcd.MoveForward(5.0f, TRUE, FALSE, FALSE, TRUE);
-					}
-					if (myDist(npcfpos, npcdpos) < 90.0f)
-					{
-						npcd.state = IDLE;
-						npcd.SetCurrentAction(NULL, 0, npcd.idleID);
-						npcd.frame = 0;
-					}
-				}
-				else if (npcd.target == NPCG)
-				{
-					npcdfDir[0] = npcgpos[0] - npcdpos[0];
-					npcdfDir[1] = npcgpos[1] - npcdpos[1];
-					npcd.SetDirection(npcdfDir, npcduDir);
-					if (npcd.isFriend)
-					{
-						npcd.MoveForward(5.0f);
-					}
-					else
-					{
-						npcd.MoveForward(5.0f, TRUE, FALSE, FALSE, TRUE);
-					}
-					if (myDist(npcgpos, npcdpos) < 90.0f)
-					{
-						npcd.state = IDLE;
-						npcd.SetCurrentAction(NULL, 0, npcd.idleID);
-						npcd.frame = 0;
-					}
-				}
+
+         switch(npcd.target)
+         {
+            case NONE:
+               npcd.state = IDLE;
+               npcd.SetCurrentAction(NULL, 0, npcd.idleID);
+               npcd.frame = 0;
+               break;
+            case ACTOR:
+               npcdfDir[0] = pos[0] - npcdpos[0];
+               npcdfDir[1] = pos[1] - npcdpos[1];
+               npcd.SetDirection(npcdfDir, npcduDir);
+               npcd.MoveForward(5.0f);
+               if (myDist(pos, npcdpos) < 90.0f)
+               {
+                  npcd.state = IDLE;
+                  npcd.SetCurrentAction(NULL, 0, npcd.idleID);
+                  npcd.frame = 0;
+               }
+               break;
+            case NPCA:
+               npcdfDir[0] = npcapos[0] - npcdpos[0];
+               npcdfDir[1] = npcapos[1] - npcdpos[1];
+               npcd.SetDirection(npcdfDir, npcduDir);
+               npcd.MoveForward(5.0f);
+               if (myDist(npcapos, npcdpos) < 90.0f)
+               {
+                  npcd.state = IDLE;
+                  npcd.SetCurrentAction(NULL, 0, npcd.idleID);
+                  npcd.frame = 0;
+               }
+               break;
+            case NPCB:
+               npcdfDir[0] = npcbpos[0] - npcdpos[0];
+               npcdfDir[1] = npcbpos[1] - npcdpos[1];
+               npcd.SetDirection(npcdfDir, npcduDir);
+               npcd.MoveForward(5.0f);
+               if (myDist(npcbpos, npcdpos) < 90.0f)
+               {
+                  npcd.state = IDLE;
+                  npcd.SetCurrentAction(NULL, 0, npcd.idleID);
+                  npcd.frame = 0;
+               }
+               break;
+            case NPCC:
+               npcdfDir[0] = npccpos[0] - npcdpos[0];
+               npcdfDir[1] = npccpos[1] - npcdpos[1];
+               npcd.SetDirection(npcdfDir, npcduDir);
+               npcd.MoveForward(5.0f);
+               if (myDist(npccpos, npcdpos) < 90.0f)
+               {
+                  npcd.state = IDLE;
+                  npcd.SetCurrentAction(NULL, 0, npcd.idleID);
+                  npcd.frame = 0;
+               }
+               break;
+            case NPCD:
+               npcdfDir[0] = npcdpos[0] - npcdpos[0];
+               npcdfDir[1] = npcdpos[1] - npcdpos[1];
+               npcd.SetDirection(npcdfDir, npcduDir);
+               npcd.MoveForward(5.0f);
+               if (myDist(npcdpos, npcdpos) < 90.0f)
+               {
+                  npcd.state = IDLE;
+                  npcd.SetCurrentAction(NULL, 0, npcd.idleID);
+                  npcd.frame = 0;
+               }
+               break;
+            case NPCE:
+               npcdfDir[0] = npcepos[0] - npcdpos[0];
+               npcdfDir[1] = npcepos[1] - npcdpos[1];
+               npcd.SetDirection(npcdfDir, npcduDir);
+               npcd.MoveForward(5.0f);
+               if (myDist(npcepos, npcdpos) < 90.0f)
+               {
+                  npcd.state = IDLE;
+                  npcd.SetCurrentAction(NULL, 0, npcd.idleID);
+                  npcd.frame = 0;
+               }
+               break;
+            case NPCF:
+               npcdfDir[0] = npcfpos[0] - npcdpos[0];
+               npcdfDir[1] = npcfpos[1] - npcdpos[1];
+               npcd.SetDirection(npcdfDir, npcduDir);
+               npcd.MoveForward(5.0f);
+               if (myDist(npcfpos, npcdpos) < 90.0f)
+               {
+                  npcd.state = IDLE;
+                  npcd.SetCurrentAction(NULL, 0, npcd.idleID);
+                  npcd.frame = 0;
+               }
+               break;
+            case NPCG:
+               npcdfDir[0] = npcgpos[0] - npcdpos[0];
+               npcdfDir[1] = npcgpos[1] - npcdpos[1];
+               npcd.SetDirection(npcdfDir, npcduDir);
+               npcd.MoveForward(5.0f);
+               if (myDist(npcgpos, npcdpos) < 90.0f)
+               {
+                  npcd.state = IDLE;
+                  npcd.SetCurrentAction(NULL, 0, npcd.idleID);
+                  npcd.frame = 0;
+               }
+               break;
+            default:
+               break;
+         }
 			break;
 		case ATTACK1:
 		// normal attack 1 31 frames
@@ -2394,84 +4979,164 @@ void GameAI(int skip)
 
 			if (npcd.frame == 17)
 			{
-				if (npcd.isFriend && (friendID[0] == NPCD || friendID[1] == NPCD))
-				{
-					if (npca.state != DIE)
-					{
-						if(isHit(npcdpos, npcapos, npcdfDir, 120.0f, 40.0f))
-						{
-							npca.blood -= 30;
-							npca.state = DAMAGE;
-							npca.SetCurrentAction(NULL, 0, npca.damageID);
-							npca.frame = 0;
-						}
-					}
-					if (npcb.state != DIE)
-					{
-						if(isHit(npcdpos, npcbpos, npcdfDir, 120.0f, 40.0f))
-						{
-							npcb.blood -= 30;
-							npcb.state = DAMAGE;
-							npcb.SetCurrentAction(NULL, 0, npcb.damageID);
-							npcb.frame = 0;
-						}
-					}
-					if (npcc.state != DIE)
-					{
-						if(isHit(npcdpos, npccpos, npcdfDir, 120.0f, 40.0f))
-						{
-							npcc.blood -= 30;
-							npcc.state = DAMAGE;
-							npcc.SetCurrentAction(NULL, 0, npcc.damageID);
-							npcc.frame = 0;
-						}
-					}
-					if (npce.state != DIE)
-					{
-						if(isHit(npcdpos, npcepos, npcdfDir, 120.0f, 40.0f))
-						{
-							npce.blood -= 30;
-							npce.state = DAMAGE;
-							npce.SetCurrentAction(NULL, 0, npce.damageID);
-							npce.frame = 0;
-						}
-					}
-					if (npcf.state != DIE)
-					{
-						if(isHit(npcdpos, npcfpos, npcdfDir, 120.0f, 40.0f))
-						{
-							npcf.blood -= 30;
-							npcf.state = DAMAGE;
-							npcf.SetCurrentAction(NULL, 0, npcf.damageID);
-							npcf.frame = 0;
-						}
-					}
-					if (npcg.state != DIE)
-					{
-						if(isHit(npcdpos, npcgpos, npcdfDir, 120.0f, 40.0f))
-						{
-							npcg.blood -= 30;
-							npcg.state = DAMAGE;
-							npcg.SetCurrentAction(NULL, 0, npcg.damageID);
-							npcg.frame = 0;
-						}
-					}
-				}
-				else
-				{
-					if (actor.state != DIE)
-					{
-						if(isHit(npcdpos, pos, npcdfDir, 120.0f, 40.0f))
-						{
-							actor.blood -= 30;
-							actor.state = DAMAGE;
-							actor.SetCurrentAction(NULL, 0, heavyDamagedID);
-							actor.frame = 0;
-							attackKeyLocked = true;
-							movementKeyLocked = true;
-						}		
-					}	
-				}
+				if (npcd.isFriend)
+            {
+               if (npca.state != DIE && !npca.isFriend)
+               {
+                  if(isHit(npcdpos, npcapos, npcdfDir, 120.0f, 40.0f))
+                  {
+                     npca.blood -= 30;
+                     npca.state = DAMAGE;
+                     npca.SetCurrentAction(NULL, 0, npca.damageID);
+                     npca.frame = 0;
+                  }
+               }
+               if (npcb.state != DIE && !npcb.isFriend)
+               {
+                  if(isHit(npcdpos, npcbpos, npcdfDir, 120.0f, 40.0f))
+                  {
+                     npcb.blood -= 30;
+                     npcb.state = DAMAGE;
+                     npcb.SetCurrentAction(NULL, 0, npcb.damageID);
+                     npcb.frame = 0;
+                  }
+               }
+               if (npcc.state != DIE && !npcc.isFriend)
+               {
+                  if(isHit(npcdpos, npccpos, npcdfDir, 120.0f, 40.0f))
+                  {
+                     npcc.blood -= 30;
+                     npcc.state = DAMAGE;
+                     npcc.SetCurrentAction(NULL, 0, npcc.damageID);
+                     npcc.frame = 0;
+                  }
+               }
+               if (npcd.state != DIE && !npcd.isFriend)
+               {
+                  if(isHit(npcdpos, npcdpos, npcdfDir, 120.0f, 40.0f))
+                  {
+                     npcd.blood -= 30;
+                     npcd.state = DAMAGE;
+                     npcd.SetCurrentAction(NULL, 0, npcd.damageID);
+                     npcd.frame = 0;
+                  }
+               }
+               if (npce.state != DIE && !npce.isFriend)
+               {
+                  if(isHit(npcdpos, npcepos, npcdfDir, 120.0f, 40.0f))
+                  {
+                     npce.blood -= 30;
+                     npce.state = DAMAGE;
+                     npce.SetCurrentAction(NULL, 0, npce.damageID);
+                     npce.frame = 0;
+                  }
+               }
+               if (npcf.state != DIE && !npcf.isFriend)
+               {
+                  if(isHit(npcdpos, npcfpos, npcdfDir, 120.0f, 40.0f))
+                  {
+                     npcf.blood -= 30;
+                     npcf.state = DAMAGE;
+                     npcf.SetCurrentAction(NULL, 0, npcf.damageID);
+                     npcf.frame = 0;
+                  }
+               }
+               if (npcg.state != DIE && !npcg.isFriend)
+               {
+                  if(isHit(npcdpos, npcgpos, npcdfDir, 120.0f, 40.0f))
+                  {
+                     npcg.blood -= 30;
+                     npcg.state = DAMAGE;
+                     npcg.SetCurrentAction(NULL, 0, npcg.damageID);
+                     npcg.frame = 0;
+                  }
+               }
+            }
+            else
+            {
+               if (actor.state != DIE)
+               {
+                  if(isHit(npcdpos, pos, npcdfDir, 120.0f, 40.0f))
+                  {
+                     actor.blood -= 30;
+                     actor.state = DAMAGE;
+                     actor.SetCurrentAction(NULL, 0, heavyDamagedID);
+                     actor.frame = 0;
+                     attackKeyLocked = true;
+                     movementKeyLocked = true;
+                  }     
+               }
+               if (npca.state != DIE && npca.isFriend)
+               {
+                  if(isHit(npcdpos, npcapos, npcdfDir, 120.0f, 40.0f))
+                  {
+                     npca.blood -= 30;
+                     npca.state = DAMAGE;
+                     npca.SetCurrentAction(NULL, 0, npca.damageID);
+                     npca.frame = 0;
+                  }
+               }
+               if (npcb.state != DIE && npcb.isFriend)
+               {
+                  if(isHit(npcdpos, npcbpos, npcdfDir, 120.0f, 40.0f))
+                  {
+                     npcb.blood -= 30;
+                     npcb.state = DAMAGE;
+                     npcb.SetCurrentAction(NULL, 0, npcb.damageID);
+                     npcb.frame = 0;
+                  }
+               }
+               if (npcc.state != DIE && npcc.isFriend)
+               {
+                  if(isHit(npcdpos, npccpos, npcdfDir, 120.0f, 40.0f))
+                  {
+                     npcc.blood -= 30;
+                     npcc.state = DAMAGE;
+                     npcc.SetCurrentAction(NULL, 0, npcc.damageID);
+                     npcc.frame = 0;
+                  }
+               }
+               if (npcd.state != DIE && npcd.isFriend)
+               {
+                  if(isHit(npcdpos, npcdpos, npcdfDir, 120.0f, 40.0f))
+                  {
+                     npcd.blood -= 30;
+                     npcd.state = DAMAGE;
+                     npcd.SetCurrentAction(NULL, 0, npcd.damageID);
+                     npcd.frame = 0;
+                  }
+               }
+               if (npce.state != DIE && npce.isFriend)
+               {
+                  if(isHit(npcdpos, npcepos, npcdfDir, 120.0f, 40.0f))
+                  {
+                     npce.blood -= 30;
+                     npce.state = DAMAGE;
+                     npce.SetCurrentAction(NULL, 0, npce.damageID);
+                     npce.frame = 0;
+                  }
+               }
+               if (npcf.state != DIE && npcf.isFriend)
+               {
+                  if(isHit(npcdpos, npcfpos, npcdfDir, 120.0f, 40.0f))
+                  {
+                     npcf.blood -= 30;
+                     npcf.state = DAMAGE;
+                     npcf.SetCurrentAction(NULL, 0, npcf.damageID);
+                     npcf.frame = 0;
+                  }
+               }
+               if (npcg.state != DIE && npcg.isFriend)
+               {
+                  if(isHit(npcdpos, npcgpos, npcdfDir, 120.0f, 40.0f))
+                  {
+                     npcg.blood -= 30;
+                     npcg.state = DAMAGE;
+                     npcg.SetCurrentAction(NULL, 0, npcg.damageID);
+                     npcg.frame = 0;
+                  }
+               }
+            }
 			}
 			if (npcd.frame == 30)
 			{
@@ -2482,6 +5147,176 @@ void GameAI(int skip)
 			break;
 		case ATTACK2:
 		// normal attack 2 31 frames
+         npcd.Play(ONCE, (float) skip, FALSE, TRUE);
+         npcd.frame++;
+
+         if (npcd.frame == 17)
+         {
+            if (npcd.isFriend)
+            {
+               if (npca.state != DIE && !npca.isFriend)
+               {
+                  if(isHit(npcdpos, npcapos, npcdfDir, 120.0f, 40.0f))
+                  {
+                     npca.blood -= 30;
+                     npca.state = DAMAGE;
+                     npca.SetCurrentAction(NULL, 0, npca.damageID);
+                     npca.frame = 0;
+                  }
+               }
+               if (npcb.state != DIE && !npcb.isFriend)
+               {
+                  if(isHit(npcdpos, npcbpos, npcdfDir, 120.0f, 40.0f))
+                  {
+                     npcb.blood -= 30;
+                     npcb.state = DAMAGE;
+                     npcb.SetCurrentAction(NULL, 0, npcb.damageID);
+                     npcb.frame = 0;
+                  }
+               }
+               if (npcc.state != DIE && !npcc.isFriend)
+               {
+                  if(isHit(npcdpos, npccpos, npcdfDir, 120.0f, 40.0f))
+                  {
+                     npcc.blood -= 30;
+                     npcc.state = DAMAGE;
+                     npcc.SetCurrentAction(NULL, 0, npcc.damageID);
+                     npcc.frame = 0;
+                  }
+               }
+               if (npcd.state != DIE && !npcd.isFriend)
+               {
+                  if(isHit(npcdpos, npcdpos, npcdfDir, 120.0f, 40.0f))
+                  {
+                     npcd.blood -= 30;
+                     npcd.state = DAMAGE;
+                     npcd.SetCurrentAction(NULL, 0, npcd.damageID);
+                     npcd.frame = 0;
+                  }
+               }
+               if (npce.state != DIE && !npce.isFriend)
+               {
+                  if(isHit(npcdpos, npcepos, npcdfDir, 120.0f, 40.0f))
+                  {
+                     npce.blood -= 30;
+                     npce.state = DAMAGE;
+                     npce.SetCurrentAction(NULL, 0, npce.damageID);
+                     npce.frame = 0;
+                  }
+               }
+               if (npcf.state != DIE && !npcf.isFriend)
+               {
+                  if(isHit(npcdpos, npcfpos, npcdfDir, 120.0f, 40.0f))
+                  {
+                     npcf.blood -= 30;
+                     npcf.state = DAMAGE;
+                     npcf.SetCurrentAction(NULL, 0, npcf.damageID);
+                     npcf.frame = 0;
+                  }
+               }
+               if (npcg.state != DIE && !npcg.isFriend)
+               {
+                  if(isHit(npcdpos, npcgpos, npcdfDir, 120.0f, 40.0f))
+                  {
+                     npcg.blood -= 30;
+                     npcg.state = DAMAGE;
+                     npcg.SetCurrentAction(NULL, 0, npcg.damageID);
+                     npcg.frame = 0;
+                  }
+               }
+            }
+            else
+            {
+               if (actor.state != DIE)
+               {
+                  if(isHit(npcdpos, pos, npcdfDir, 120.0f, 40.0f))
+                  {
+                     actor.blood -= 30;
+                     actor.state = DAMAGE;
+                     actor.SetCurrentAction(NULL, 0, heavyDamagedID);
+                     actor.frame = 0;
+                     attackKeyLocked = true;
+                     movementKeyLocked = true;
+                  }     
+               }
+               if (npca.state != DIE && npca.isFriend)
+               {
+                  if(isHit(npcdpos, npcapos, npcdfDir, 120.0f, 40.0f))
+                  {
+                     npca.blood -= 30;
+                     npca.state = DAMAGE;
+                     npca.SetCurrentAction(NULL, 0, npca.damageID);
+                     npca.frame = 0;
+                  }
+               }
+               if (npcb.state != DIE && npcb.isFriend)
+               {
+                  if(isHit(npcdpos, npcbpos, npcdfDir, 120.0f, 40.0f))
+                  {
+                     npcb.blood -= 30;
+                     npcb.state = DAMAGE;
+                     npcb.SetCurrentAction(NULL, 0, npcb.damageID);
+                     npcb.frame = 0;
+                  }
+               }
+               if (npcc.state != DIE && npcc.isFriend)
+               {
+                  if(isHit(npcdpos, npccpos, npcdfDir, 120.0f, 40.0f))
+                  {
+                     npcc.blood -= 30;
+                     npcc.state = DAMAGE;
+                     npcc.SetCurrentAction(NULL, 0, npcc.damageID);
+                     npcc.frame = 0;
+                  }
+               }
+               if (npcd.state != DIE && npcd.isFriend)
+               {
+                  if(isHit(npcdpos, npcdpos, npcdfDir, 120.0f, 40.0f))
+                  {
+                     npcd.blood -= 30;
+                     npcd.state = DAMAGE;
+                     npcd.SetCurrentAction(NULL, 0, npcd.damageID);
+                     npcd.frame = 0;
+                  }
+               }
+               if (npce.state != DIE && npce.isFriend)
+               {
+                  if(isHit(npcdpos, npcepos, npcdfDir, 120.0f, 40.0f))
+                  {
+                     npce.blood -= 30;
+                     npce.state = DAMAGE;
+                     npce.SetCurrentAction(NULL, 0, npce.damageID);
+                     npce.frame = 0;
+                  }
+               }
+               if (npcf.state != DIE && npcf.isFriend)
+               {
+                  if(isHit(npcdpos, npcfpos, npcdfDir, 120.0f, 40.0f))
+                  {
+                     npcf.blood -= 30;
+                     npcf.state = DAMAGE;
+                     npcf.SetCurrentAction(NULL, 0, npcf.damageID);
+                     npcf.frame = 0;
+                  }
+               }
+               if (npcg.state != DIE && npcg.isFriend)
+               {
+                  if(isHit(npcdpos, npcgpos, npcdfDir, 120.0f, 40.0f))
+                  {
+                     npcg.blood -= 30;
+                     npcg.state = DAMAGE;
+                     npcg.SetCurrentAction(NULL, 0, npcg.damageID);
+                     npcg.frame = 0;
+                  }
+               }
+            }
+         }
+         if (npcd.frame == 30)
+         {
+            npcd.state = IDLE;
+            npcd.SetCurrentAction(NULL, 0, npcd.idleID); 
+            npcd.frame = 0;
+         }
 			break;
 		case DAMAGE:
 		// no damage
@@ -2499,19 +5334,30 @@ void GameAI(int skip)
 			}
 			break;
 		case DIE:
-		// die
+		// die 46
 			npcd.Play(ONCE, (float) skip, FALSE, TRUE);
 			if (!npcd.isFriend)
 			{
 				npcd.frame++;
-				if (npcd.frame == 300)
+				if (npcd.frame == 75)
 				{
-					npcd.state = IDLE;
-					npcd.SetCurrentAction(NULL, 0, npcd.idleID);
-					npcd.frame = 0;
-					npcd.blood = npcd.fullBlood;
+					if (teammateID[0] == NONE)
+					{
+						teammateID[0] = NPCD;
+						npcd.state = IDLE;
+						npcd.SetCurrentAction(NULL, 0, npcd.idleID);
+						npcd.frame = 0;
+						npcd.blood = npcd.fullBlood;
+					}
+					else if (teammateID[1] == NONE)
+					{
+						teammateID[1] = NPCD;
+						npcd.state = IDLE;
+						npcd.SetCurrentAction(NULL, 0, npcd.idleID);
+						npcd.frame = 0;
+						npcd.blood = npcd.fullBlood;
+					}
 					npcd.isFriend = true;
-					friendID[0] = NPCD;
 				}
 			}
 			break;
@@ -2522,11 +5368,11 @@ void GameAI(int skip)
 	npcd.BB();
 
 	/*------------------------------------------
-	 ||||    || |||||||||   ||||||||  
-	 || ||   || ||      || ||      || 
-	 ||  ||  || |||||||||  ||         e
-	 ||   || || ||         ||      || 
-	 ||    |||| ||          ||||||||  
+	 ||||    || |||||||||   ||||||||  ||||||||||
+	 || ||   || ||      || ||      || ||
+	 ||  ||  || |||||||||  ||         ||||||||
+	 ||   || || ||         ||      || ||
+	 ||    |||| ||          ||||||||  ||||||||||
 	 ------------------------------------------*/
 
 	if (npce.blood <= 0 && npce.state != DIE)
@@ -2534,6 +5380,147 @@ void GameAI(int skip)
 		npce.state = DIE;
 		npce.SetCurrentAction(NULL, 0, npce.dieID);
 	}
+
+   if (npce.state != DIE)
+   {
+      if (npce.isFriend)
+      {
+         if ((teammateID[0] == NPCE && isFollow[0]) || (teammateID[1] == NPCE && isFollow[1]))
+         {
+            npce.target = ACTOR;
+         }
+         else
+         {
+            switch(npce.target)
+            {
+               case NONE:
+                  npce.target = nearestEnemy(NPCE, npcepos);
+                  if (npce.target == NONE)
+                  {
+                     npce.target = ACTOR;
+                  }
+                  break;
+               case ACTOR:
+                  if (actor.state == DIE)
+                  {
+                     npce.target = NONE;
+                  }
+                  if ((teammateID[0] == NPCE && !isFollow[0]) || (teammateID[1] == NPCE && !isFollow[1]))
+                  {
+                     npce.target = nearestEnemy(NPCE, npcepos);
+                     if (npce.target == NONE)
+                     {
+                        npce.target = ACTOR;
+                     }
+                  }
+                  break;
+               case NPCA:
+                  if (npca.state == DIE)
+                  {
+                     npce.target = NONE;
+                  }
+                  break;
+               case NPCB:
+                  if (npcb.state == DIE)
+                  {
+                     npce.target = NONE;
+                  }
+                  break;
+               case NPCC:
+                  if (npcc.state == DIE)
+                  {
+                     npce.target = NONE;
+                  }
+                  break;
+               case NPCD:
+                  if (npcd.state == DIE)
+                  {
+                     npce.target = NONE;
+                  }
+                  break;
+               case NPCE:
+                  if (npce.state == DIE)
+                  {
+                     npce.target = NONE;
+                  }
+                  break;
+               case NPCF:
+                  if (npcf.state == DIE)
+                  {
+                     npce.target = NONE;
+                  }
+                  break;
+               case NPCG:
+                  if (npcg.state == DIE)
+                  {
+                     npce.target = NONE;
+                  }
+                  break;
+               default:
+                  break;
+            }
+         }
+      }
+      else
+      {
+         switch(npce.target)
+         {
+            case NONE:
+               npce.target = nearestFriend(NPCE, npcepos);
+               break;
+            case ACTOR:
+               if (actor.state == DIE)
+               {
+                  npce.target = NONE;
+               }
+               break;
+            case NPCA:
+               if (npca.state == DIE)
+               {
+                  npce.target = NONE;
+               }
+               break;
+            case NPCB:
+               if (npcb.state == DIE)
+               {
+                  npce.target = NONE;
+               }
+               break;
+            case NPCC:
+               if (npcc.state == DIE)
+               {
+                  npce.target = NONE;
+               }
+               break;
+            case NPCD:
+               if (npcd.state == DIE)
+               {
+                  npce.target = NONE;
+               }
+               break;
+            case NPCE:
+               if (npce.state == DIE)
+               {
+                  npce.target = NONE;
+               }
+               break;
+            case NPCF:
+               if (npcf.state == DIE)
+               {
+                  npce.target = NONE;
+               }
+               break;
+            case NPCG:
+               if (npcg.state == DIE)
+               {
+                  npce.target = NONE;
+               }
+               break;
+            default:
+               break;
+         }
+      }
+   }
 
 	/*
 		npce.state:
@@ -2549,466 +5536,383 @@ void GameAI(int skip)
 		case IDLE:
 		// combat idle
 			npce.Play(LOOP, (float) skip, FALSE, TRUE);
-			if (npce.isFriend)
-			{
-				if ((isFollow[0] && friendID[0] == NPCE) || (isFollow[1] && friendID[1] == NPCE))
-				{
-					if (myDist(pos, npcepos) >= 100.0f)
-					{
-						npce.state = RUN;
-						npce.SetCurrentAction(NULL, 0, npce.runID);
-						npce.frame = 0;
-						npce.target = ACTOR;
-					}
-				}
-				else if ((!isFollow[0] && friendID[0] == NPCE) || (!isFollow[1] && friendID[1] == NPCE))
-				{
-					if (myDist(npcepos, npcapos) <= 1000.0f && myDist(npcepos, npcapos) >= 100.0f && npca.state != DIE && !npca.isFriend)
-					{
-						npce.state = RUN;
-						npce.SetCurrentAction(NULL, 0, npce.runID);
-						npce.frame = 0;
-						npce.target = NPCA;
-					}
-					else if (myDist(npcepos, npcapos) < 100.0f  && npca.state != DIE && !npca.isFriend)
-					{
-						npce.wait++;
-						npcefDir[0] = npcapos[0] - npcepos[0];
-						npcefDir[1] = npcapos[1] - npcepos[1];
-						npce.SetDirection(npcefDir, npceuDir);
-						if (npce.wait == 50)
-						{
-							npce.state = ATTACK1;
-							npce.SetCurrentAction(NULL, 0, npce.attack1ID);
-							npce.frame = 0;
-							npce.target = NPCA;
-							npce.wait = 0;
-						}
-					}
-					else if (myDist(npcepos, npcbpos) <= 1000.0f && myDist(npcepos, npcbpos) >= 100.0f && npcb.state != DIE && !npcb.isFriend)
-					{
-						npce.state = RUN;
-						npce.SetCurrentAction(NULL, 0, npce.runID);
-						npce.frame = 0;
-						npce.target = NPCB;
-					}
-					else if (myDist(npcepos, npcbpos) < 100.0f  && npcb.state != DIE && !npcb.isFriend)
-					{
-						npce.wait++;
-						npcefDir[0] = npcbpos[0] - npcepos[0];
-						npcefDir[1] = npcbpos[1] - npcepos[1];
-						npce.SetDirection(npcefDir, npceuDir);
-						if (npce.wait == 50)
-						{
-							npce.state = ATTACK1;
-							npce.SetCurrentAction(NULL, 0, npce.attack1ID);
-							npce.frame = 0;
-							npce.target = NPCB;
-							npce.wait = 0;
-						}
-					}
-					else if (myDist(npcepos, npccpos) <= 1000.0f && myDist(npcepos, npccpos) >= 100.0f && npcc.state != DIE && !npcc.isFriend)
-					{
-						npce.state = RUN;
-						npce.SetCurrentAction(NULL, 0, npce.runID);
-						npce.frame = 0;
-						npce.target = NPCC;
-					}
-					else if (myDist(npcepos, npccpos) < 100.0f  && npcc.state != DIE && !npcc.isFriend)
-					{
-						npce.wait++;
-						npcefDir[0] = npccpos[0] - npcepos[0];
-						npcefDir[1] = npccpos[1] - npcepos[1];
-						npce.SetDirection(npcefDir, npceuDir);
-						if (npce.wait == 50)
-						{
-							npce.state = ATTACK1;
-							npce.SetCurrentAction(NULL, 0, npce.attack1ID);
-							npce.frame = 0;
-							npce.target = NPCC;
-							npce.wait = 0;
-						}
-					}
-					else if (myDist(npcepos, npcdpos) <= 1000.0f && myDist(npcepos, npcdpos) >= 100.0f && npcd.state != DIE && !npcd.isFriend)
-					{
-						npce.state = RUN;
-						npce.SetCurrentAction(NULL, 0, npce.runID);
-						npce.frame = 0;
-						npce.target = NPCF;
-					}
-					else if (myDist(npcepos, npcdpos) < 100.0f  && npcd.state != DIE && !npcd.isFriend)
-					{
-						npce.wait++;
-						npcefDir[0] = npcdpos[0] - npcepos[0];
-						npcefDir[1] = npcdpos[1] - npcepos[1];
-						npce.SetDirection(npcefDir, npceuDir);
-						if (npce.wait == 50)
-						{
-							npce.state = ATTACK1;
-							npce.SetCurrentAction(NULL, 0, npce.attack1ID);
-							npce.frame = 0;
-							npce.target = NPCF;
-							npce.wait = 0;
-						}
-					}
-					else if (myDist(npcepos, npcfpos) <= 1000.0f && myDist(npcepos, npcfpos) >= 100.0f && npcf.state != DIE && !npcf.isFriend)
-					{
-						npce.state = RUN;
-						npce.SetCurrentAction(NULL, 0, npce.runID);
-						npce.frame = 0;
-						npce.target = NPCF;
-					}
-					else if (myDist(npcepos, npcfpos) < 100.0f  && npcf.state != DIE && !npcf.isFriend)
-					{
-						npce.wait++;
-						npcefDir[0] = npcfpos[0] - npcepos[0];
-						npcefDir[1] = npcfpos[1] - npcepos[1];
-						npce.SetDirection(npcefDir, npceuDir);
-						if (npce.wait == 50)
-						{
-							npce.state = ATTACK1;
-							npce.SetCurrentAction(NULL, 0, npce.attack1ID);
-							npce.frame = 0;
-							npce.target = NPCF;
-							npce.wait = 0;
-						}
-					}
-					else if (myDist(npcepos, npcgpos) <= 1000.0f && myDist(npcepos, npcgpos) >= 100.0f && npcg.state != DIE && !npcg.isFriend)
-					{
-						npce.state = RUN;
-						npce.SetCurrentAction(NULL, 0, npce.runID);
-						npce.frame = 0;
-						npce.target = NPCG;
-					}
-					else if (myDist(npcepos, npcgpos) < 100.0f  && npcg.state != DIE && !npcg.isFriend)
-					{
-						npce.wait++;
-						npcefDir[0] = npcgpos[0] - npcepos[0];
-						npcefDir[1] = npcgpos[1] - npcepos[1];
-						npce.SetDirection(npcefDir, npceuDir);
-						if (npce.wait == 50)
-						{
-							npce.state = ATTACK1;
-							npce.SetCurrentAction(NULL, 0, npce.attack1ID);
-							npce.frame = 0;
-							npce.target = NPCG;
-							npce.wait = 0;
-						}
-					}
-					else if (myDist(pos, npcepos) >= 100.0f)
-					{
-						npce.state = RUN;
-						npce.SetCurrentAction(NULL, 0, npce.runID);
-						npce.frame = 0;
-						npce.target = ACTOR;
-					}
-				}
-			}
-			else
-			{
-				if (myDist(npcepos, npcapos) <= 1000.0f && myDist(npcepos, npcapos) >= 100.0f && npca.state != DIE && npca.isFriend)
-					{
-						npce.state = RUN;
-						npce.SetCurrentAction(NULL, 0, npce.runID);
-						npce.frame = 0;
-						npce.target = NPCA;
-					}
-					else if (myDist(npcepos, npcapos) < 100.0f  && npca.state != DIE && npca.isFriend)
-					{
-						npce.wait++;
-						npcefDir[0] = npcapos[0] - npcepos[0];
-						npcefDir[1] = npcapos[1] - npcepos[1];
-						npce.SetDirection(npcefDir, npceuDir);
-						if (npce.wait == 50)
-						{
-							npce.state = ATTACK1;
-							npce.SetCurrentAction(NULL, 0, npce.attack1ID);
-							npce.frame = 0;
-							npce.target = NPCA;
-							npce.wait = 0;
-						}
-					}
-					else if (myDist(npcepos, npcbpos) <= 1000.0f && myDist(npcepos, npcbpos) >= 100.0f && npcb.state != DIE && npcb.isFriend)
-					{
-						npce.state = RUN;
-						npce.SetCurrentAction(NULL, 0, npce.runID);
-						npce.frame = 0;
-						npce.target = NPCB;
-					}
-					else if (myDist(npcepos, npcbpos) < 100.0f  && npcb.state != DIE && npcb.isFriend)
-					{
-						npce.wait++;
-						npcefDir[0] = npcbpos[0] - npcepos[0];
-						npcefDir[1] = npcbpos[1] - npcepos[1];
-						npce.SetDirection(npcefDir, npceuDir);
-						if (npce.wait == 50)
-						{
-							npce.state = ATTACK1;
-							npce.SetCurrentAction(NULL, 0, npce.attack1ID);
-							npce.frame = 0;
-							npce.target = NPCB;
-							npce.wait = 0;
-						}
-					}
-					else if (myDist(npcepos, npccpos) <= 1000.0f && myDist(npcepos, npccpos) >= 100.0f && npcc.state != DIE && npcc.isFriend)
-					{
-						npce.state = RUN;
-						npce.SetCurrentAction(NULL, 0, npce.runID);
-						npce.frame = 0;
-						npce.target = NPCC;
-					}
-					else if (myDist(npcepos, npccpos) < 100.0f  && npcc.state != DIE && npcc.isFriend)
-					{
-						npce.wait++;
-						npcefDir[0] = npccpos[0] - npcepos[0];
-						npcefDir[1] = npccpos[1] - npcepos[1];
-						npce.SetDirection(npcefDir, npceuDir);
-						if (npce.wait == 50)
-						{
-							npce.state = ATTACK1;
-							npce.SetCurrentAction(NULL, 0, npce.attack1ID);
-							npce.frame = 0;
-							npce.target = NPCC;
-							npce.wait = 0;
-						}
-					}
-					else if (myDist(npcepos, npcdpos) <= 1000.0f && myDist(npcepos, npcdpos) >= 100.0f && npcd.state != DIE && npcd.isFriend)
-					{
-						npce.state = RUN;
-						npce.SetCurrentAction(NULL, 0, npce.runID);
-						npce.frame = 0;
-						npce.target = NPCF;
-					}
-					else if (myDist(npcepos, npcdpos) < 100.0f  && npcd.state != DIE && npcd.isFriend)
-					{
-						npce.wait++;
-						npcefDir[0] = npcdpos[0] - npcepos[0];
-						npcefDir[1] = npcdpos[1] - npcepos[1];
-						npce.SetDirection(npcefDir, npceuDir);
-						if (npce.wait == 50)
-						{
-							npce.state = ATTACK1;
-							npce.SetCurrentAction(NULL, 0, npce.attack1ID);
-							npce.frame = 0;
-							npce.target = NPCF;
-							npce.wait = 0;
-						}
-					}
-					else if (myDist(npcepos, npcfpos) <= 1000.0f && myDist(npcepos, npcfpos) >= 100.0f && npcf.state != DIE && npcf.isFriend)
-					{
-						npce.state = RUN;
-						npce.SetCurrentAction(NULL, 0, npce.runID);
-						npce.frame = 0;
-						npce.target = NPCF;
-					}
-					else if (myDist(npcepos, npcfpos) < 100.0f  && npcf.state != DIE && npcf.isFriend)
-					{
-						npce.wait++;
-						npcefDir[0] = npcfpos[0] - npcepos[0];
-						npcefDir[1] = npcfpos[1] - npcepos[1];
-						npce.SetDirection(npcefDir, npceuDir);
-						if (npce.wait == 50)
-						{
-							npce.state = ATTACK1;
-							npce.SetCurrentAction(NULL, 0, npce.attack1ID);
-							npce.frame = 0;
-							npce.target = NPCF;
-							npce.wait = 0;
-						}
-					}
-					else if (myDist(npcepos, npcgpos) <= 1000.0f && myDist(npcepos, npcgpos) >= 100.0f && npcg.state != DIE && npcg.isFriend)
-					{
-						npce.state = RUN;
-						npce.SetCurrentAction(NULL, 0, npce.runID);
-						npce.frame = 0;
-						npce.target = NPCG;
-					}
-					else if (myDist(npcepos, npcgpos) < 100.0f  && npcg.state != DIE && npcg.isFriend)
-					{
-						npce.wait++;
-						npcefDir[0] = npcgpos[0] - npcepos[0];
-						npcefDir[1] = npcgpos[1] - npcepos[1];
-						npce.SetDirection(npcefDir, npceuDir);
-						if (npce.wait == 50)
-						{
-							npce.state = ATTACK1;
-							npce.SetCurrentAction(NULL, 0, npce.attack1ID);
-							npce.frame = 0;
-							npce.target = NPCG;
-							npce.wait = 0;
-						}
-					}
-				else if (myDist(pos, npcepos) <= 1000.0f && myDist(pos, npcepos) >= 100.0f)
-				{
-					npce.state = RUN;
-					npce.SetCurrentAction(NULL, 0, npce.runID);
-					npce.frame = 0;
-					npce.target = ACTOR;
-				}
-				else if (myDist(pos, npcepos) < 100.0f  && actor.state != DIE)
-				{
-					npce.wait++;
-					npcefDir[0] = pos[0] - npcepos[0];
-					npcefDir[1] = pos[1] - npcepos[1];
-					npce.SetDirection(npcefDir, npceuDir);
-					if (npce.wait == 50)
-					{
-						npce.state = ATTACK1;
-						npce.SetCurrentAction(NULL, 0, npce.attack1ID);
-						npce.frame = 0;
-						npce.target = ACTOR;
-						npce.wait = 0;
-					}
-				}
-			}
+			switch (npce.target)
+         {
+            case NONE:
+               break;
+            case ACTOR:
+               if (npce.isFriend)
+               {
+                  if (myDist(pos, npcepos) >= 100.0f)
+                  {
+                     npce.state = RUN;
+                     npce.SetCurrentAction(NULL, 0, npce.runID);
+                     npce.frame = 0;
+                  }
+               }
+               else
+               {
+                  if (myDist(pos, npcepos) <= 500.0f && myDist(pos, npcepos) >= 100.0f)
+                  {  
+                     npce.state = RUN;
+                     npce.SetCurrentAction(NULL, 0, npce.runID);
+                     npce.frame = 0;
+                  }
+                  else if (myDist(pos, npcepos) < 100.0f  && actor.state != DIE)
+                  {
+                     npce.wait1++;
+                     npcefDir[0] = pos[0] - npcepos[0];
+                     npcefDir[1] = pos[1] - npcepos[1];
+                     npce.SetDirection(npcefDir, npceuDir);
+                     if (npce.wait1 % 50 == 0)
+                     {
+                        npce.wait2++;
+                        if (npce.wait2 % 2 == 0)
+                        {
+                           npce.state = ATTACK2;
+                           npce.SetCurrentAction(NULL, 0, npce.attack2ID);
+                           npce.frame = 0;
+                        }
+                        else
+                        {
+                           npce.state = ATTACK1;
+                           npce.SetCurrentAction(NULL, 0, npce.attack1ID);
+                           npce.frame = 0;
+                        }
+                     }
+                  }
+               }
+               break;
+            case NPCA:
+               if (myDist(npcepos, npcapos) <= 600.0f && myDist(npcepos, npcapos) >= 100.0f)
+               {
+                  npce.state = RUN;
+                  npce.SetCurrentAction(NULL, 0, npce.runID);
+                  npce.frame = 0;
+               }
+               else if (myDist(npcepos, npcapos) < 100.0f)
+               {
+                  npce.wait1++;
+                  npcefDir[0] = npcapos[0] - npcepos[0];
+                  npcefDir[1] = npcapos[1] - npcepos[1];
+                  npce.SetDirection(npcefDir, npceuDir);
+                  if (npce.wait1 % 50 == 0)
+                  {
+                     npce.wait1++;
+                     if (npce.wait2 % 2 == 0)
+                     {
+                        npce.state = ATTACK2;
+                        npce.SetCurrentAction(NULL, 0, npce.attack2ID);
+                        npce.frame = 0;
+                     }
+                     else
+                     {
+                        npce.state = ATTACK1;
+                        npce.SetCurrentAction(NULL, 0, npce.attack1ID);
+                        npce.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCB:
+               if (myDist(npcepos, npcbpos) <= 600.0f && myDist(npcepos, npcbpos) >= 100.0f)
+               {
+                  npce.state = RUN;
+                  npce.SetCurrentAction(NULL, 0, npce.runID);
+                  npce.frame = 0;
+               }
+               else if (myDist(npcepos, npcbpos) < 100.0f)
+               {
+                  npce.wait1++;
+                  npcefDir[0] = npcbpos[0] - npcepos[0];
+                  npcefDir[1] = npcbpos[1] - npcepos[1];
+                  npce.SetDirection(npcefDir, npceuDir);
+                  if (npce.wait1 % 50 == 0)
+                  {
+                     npce.wait1++;
+                     if (npce.wait2 % 2 == 0)
+                     {
+                        npce.state = ATTACK2;
+                        npce.SetCurrentAction(NULL, 0, npce.attack2ID);
+                        npce.frame = 0;
+                     }
+                     else
+                     {
+                        npce.state = ATTACK1;
+                        npce.SetCurrentAction(NULL, 0, npce.attack1ID);
+                        npce.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCC:
+               if (myDist(npcepos, npccpos) <= 600.0f && myDist(npcepos, npccpos) >= 100.0f)
+               {
+                  npce.state = RUN;
+                  npce.SetCurrentAction(NULL, 0, npce.runID);
+                  npce.frame = 0;
+               }
+               else if (myDist(npcepos, npccpos) < 100.0f)
+               {
+                  npce.wait1++;
+                  npcefDir[0] = npccpos[0] - npcepos[0];
+                  npcefDir[1] = npccpos[1] - npcepos[1];
+                  npce.SetDirection(npcefDir, npceuDir);
+                  if (npce.wait1 % 50 == 0)
+                  {
+                     npce.wait1++;
+                     if (npce.wait2 % 2 == 0)
+                     {
+                        npce.state = ATTACK2;
+                        npce.SetCurrentAction(NULL, 0, npce.attack2ID);
+                        npce.frame = 0;
+                     }
+                     else
+                     {
+                        npce.state = ATTACK1;
+                        npce.SetCurrentAction(NULL, 0, npce.attack1ID);
+                        npce.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCD:
+               if (myDist(npcepos, npcdpos) <= 600.0f && myDist(npcepos, npcdpos) >= 100.0f)
+               {
+                  npce.state = RUN;
+                  npce.SetCurrentAction(NULL, 0, npce.runID);
+                  npce.frame = 0;
+               }
+               else if (myDist(npcepos, npcdpos) < 100.0f)
+               {
+                  npce.wait1++;
+                  npcefDir[0] = npcdpos[0] - npcepos[0];
+                  npcefDir[1] = npcdpos[1] - npcepos[1];
+                  npce.SetDirection(npcefDir, npceuDir);
+                  if (npce.wait1 % 50 == 0)
+                  {
+                     npce.wait1++;
+                     if (npce.wait2 % 2 == 0)
+                     {
+                        npce.state = ATTACK2;
+                        npce.SetCurrentAction(NULL, 0, npce.attack2ID);
+                        npce.frame = 0;
+                     }
+                     else
+                     {
+                        npce.state = ATTACK1;
+                        npce.SetCurrentAction(NULL, 0, npce.attack1ID);
+                        npce.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCE:
+               if (myDist(npcepos, npcepos) <= 600.0f && myDist(npcepos, npcepos) >= 100.0f)
+               {
+                  npce.state = RUN;
+                  npce.SetCurrentAction(NULL, 0, npce.runID);
+                  npce.frame = 0;
+               }
+               else if (myDist(npcepos, npcepos) < 100.0f)
+               {
+                  npce.wait1++;
+                  npcefDir[0] = npcepos[0] - npcepos[0];
+                  npcefDir[1] = npcepos[1] - npcepos[1];
+                  npce.SetDirection(npcefDir, npceuDir);
+                  if (npce.wait1 % 50 == 0)
+                  {
+                     npce.wait1++;
+                     if (npce.wait2 % 2 == 0)
+                     {
+                        npce.state = ATTACK2;
+                        npce.SetCurrentAction(NULL, 0, npce.attack2ID);
+                        npce.frame = 0;
+                     }
+                     else
+                     {
+                        npce.state = ATTACK1;
+                        npce.SetCurrentAction(NULL, 0, npce.attack1ID);
+                        npce.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCF:
+               if (myDist(npcepos, npcfpos) <= 600.0f && myDist(npcepos, npcfpos) >= 100.0f)
+               {
+                  npce.state = RUN;
+                  npce.SetCurrentAction(NULL, 0, npce.runID);
+                  npce.frame = 0;
+               }
+               else if (myDist(npcepos, npcfpos) < 100.0f)
+               {
+                  npce.wait1++;
+                  npcefDir[0] = npcfpos[0] - npcepos[0];
+                  npcefDir[1] = npcfpos[1] - npcepos[1];
+                  npce.SetDirection(npcefDir, npceuDir);
+                  if (npce.wait1 % 50 == 0)
+                  {
+                     npce.wait1++;
+                     if (npce.wait2 % 2 == 0)
+                     {
+                        npce.state = ATTACK2;
+                        npce.SetCurrentAction(NULL, 0, npce.attack2ID);
+                        npce.frame = 0;
+                     }
+                     else
+                     {
+                        npce.state = ATTACK1;
+                        npce.SetCurrentAction(NULL, 0, npce.attack1ID);
+                        npce.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCG:
+               if (myDist(npcepos, npcgpos) <= 600.0f && myDist(npcepos, npcgpos) >= 100.0f)
+               {
+                  npce.state = RUN;
+                  npce.SetCurrentAction(NULL, 0, npce.runID);
+                  npce.frame = 0;
+               }
+               else if (myDist(npcepos, npcgpos) < 100.0f)
+               {
+                  npce.wait1++;
+                  npcefDir[0] = npcgpos[0] - npcepos[0];
+                  npcefDir[1] = npcgpos[1] - npcepos[1];
+                  npce.SetDirection(npcefDir, npceuDir);
+                  if (npce.wait1 % 50 == 0)
+                  {
+                     npce.wait1++;
+                     if (npce.wait2 % 2 == 0)
+                     {
+                        npce.state = ATTACK2;
+                        npce.SetCurrentAction(NULL, 0, npce.attack2ID);
+                        npce.frame = 0;
+                     }
+                     else
+                     {
+                        npce.state = ATTACK1;
+                        npce.SetCurrentAction(NULL, 0, npce.attack1ID);
+                        npce.frame = 0;
+                     }
+                  }
+               }
+               break;
+            default:
+               break;
+         }
 			break;
 		case RUN:
 		// run
 			npce.Play(LOOP, (float) skip, FALSE, TRUE);
-				if ((friendID[0] == NPCE && isFollow[0]) || (friendID[1] == NPCE && isFollow[1]))
-				{
-					npce.target = ACTOR;
-				}
-				if(npce.target == ACTOR)
-				{
-					npcefDir[0] = pos[0] - npcepos[0];
-					npcefDir[1] = pos[1] - npcepos[1];
-					npce.SetDirection(npcefDir, npceuDir);
-					if (npce.isFriend)
-					{
-						npce.MoveForward(5.0f);
-					}
-					else
-					{
-						npce.MoveForward(5.0f, TRUE, FALSE, FALSE, TRUE);
-					}
-					if (myDist(pos, npcepos) < 90.0f)
-					{
-						npce.state = IDLE;
-						npce.SetCurrentAction(NULL, 0, npce.idleID);
-						npce.frame = 0;
-					}
-				}
-				else if (npce.target == NPCA)
-				{
-					npcefDir[0] = npcapos[0] - npcepos[0];
-					npcefDir[1] = npcapos[1] - npcepos[1];
-					npce.SetDirection(npcefDir, npceuDir);
-					if (npce.isFriend)
-					{
-						npce.MoveForward(5.0f);
-					}
-					else
-					{
-						npce.MoveForward(5.0f, TRUE, FALSE, FALSE, TRUE);
-					}
-					if (myDist(npcapos, npcepos) < 90.0f)
-					{
-						npce.state = IDLE;
-						npce.SetCurrentAction(NULL, 0, npce.idleID);
-						npce.frame = 0;
-					}
-				}
-				else if (npce.target == NPCB)
-				{
-					npcefDir[0] = npcbpos[0] - npcepos[0];
-					npcefDir[1] = npcbpos[1] - npcepos[1];
-					npce.SetDirection(npcefDir, npceuDir);
-					if (npce.isFriend)
-					{
-						npce.MoveForward(5.0f);
-					}
-					else
-					{
-						npce.MoveForward(5.0f, TRUE, FALSE, FALSE, TRUE);
-					}
-					if (myDist(npcbpos, npcepos) < 90.0f)
-					{
-						npce.state = IDLE;
-						npce.SetCurrentAction(NULL, 0, npce.idleID);
-						npce.frame = 0;
-					}
-				}
-				else if (npce.target == NPCC)
-				{
-					npcefDir[0] = npccpos[0] - npcepos[0];
-					npcefDir[1] = npccpos[1] - npcepos[1];
-					npce.SetDirection(npcefDir, npceuDir);
-					if (npce.isFriend)
-					{
-						npce.MoveForward(5.0f);
-					}
-					else
-					{
-						npce.MoveForward(5.0f, TRUE, FALSE, FALSE, TRUE);
-					}
-					if (myDist(npccpos, npcepos) < 90.0f)
-					{
-						npce.state = IDLE;
-						npce.SetCurrentAction(NULL, 0, npce.idleID);
-						npce.frame = 0;
-					}
-				}
-				else if (npce.target == NPCD)
-				{
-					npcefDir[0] = npcdpos[0] - npcepos[0];
-					npcefDir[1] = npcdpos[1] - npcepos[1];
-					npce.SetDirection(npcefDir, npceuDir);
-					if (npce.isFriend)
-					{
-						npce.MoveForward(5.0f);
-					}
-					else
-					{
-						npce.MoveForward(5.0f, TRUE, FALSE, FALSE, TRUE);
-					}
-					if (myDist(npcdpos, npcepos) < 90.0f)
-					{
-						npce.state = IDLE;
-						npce.SetCurrentAction(NULL, 0, npce.idleID);
-						npce.frame = 0;
-					}
-				}
-				else if (npce.target == NPCF)
-				{
-					npcefDir[0] = npcfpos[0] - npcepos[0];
-					npcefDir[1] = npcfpos[1] - npcepos[1];
-					npce.SetDirection(npcefDir, npceuDir);
-					if (npce.isFriend)
-					{
-						npce.MoveForward(5.0f);
-					}
-					else
-					{
-						npce.MoveForward(5.0f, TRUE, FALSE, FALSE, TRUE);
-					}
-					if (myDist(npcfpos, npcepos) < 90.0f)
-					{
-						npce.state = IDLE;
-						npce.SetCurrentAction(NULL, 0, npce.idleID);
-						npce.frame = 0;
-					}
-				}
-				else if (npce.target == NPCG)
-				{
-					npcefDir[0] = npcgpos[0] - npcepos[0];
-					npcefDir[1] = npcgpos[1] - npcepos[1];
-					npce.SetDirection(npcefDir, npceuDir);
-					if (npce.isFriend)
-					{
-						npce.MoveForward(5.0f);
-					}
-					else
-					{
-						npce.MoveForward(5.0f, TRUE, FALSE, FALSE, TRUE);
-					}
-					if (myDist(npcgpos, npcepos) < 90.0f)
-					{
-						npce.state = IDLE;
-						npce.SetCurrentAction(NULL, 0, npce.idleID);
-						npce.frame = 0;
-					}
-				}
+			switch(npce.target)
+         {
+            case NONE:
+               npce.state = IDLE;
+               npce.SetCurrentAction(NULL, 0, npce.idleID);
+               npce.frame = 0;
+               break;
+            case ACTOR:
+               npcefDir[0] = pos[0] - npcepos[0];
+               npcefDir[1] = pos[1] - npcepos[1];
+               npce.SetDirection(npcefDir, npceuDir);
+               npce.MoveForward(5.0f);
+               if (myDist(pos, npcepos) < 90.0f)
+               {
+                  npce.state = IDLE;
+                  npce.SetCurrentAction(NULL, 0, npce.idleID);
+                  npce.frame = 0;
+               }
+               break;
+            case NPCA:
+               npcefDir[0] = npcapos[0] - npcepos[0];
+               npcefDir[1] = npcapos[1] - npcepos[1];
+               npce.SetDirection(npcefDir, npceuDir);
+               npce.MoveForward(5.0f);
+               if (myDist(npcapos, npcepos) < 90.0f)
+               {
+                  npce.state = IDLE;
+                  npce.SetCurrentAction(NULL, 0, npce.idleID);
+                  npce.frame = 0;
+               }
+               break;
+            case NPCB:
+               npcefDir[0] = npcbpos[0] - npcepos[0];
+               npcefDir[1] = npcbpos[1] - npcepos[1];
+               npce.SetDirection(npcefDir, npceuDir);
+               npce.MoveForward(5.0f);
+               if (myDist(npcbpos, npcepos) < 90.0f)
+               {
+                  npce.state = IDLE;
+                  npce.SetCurrentAction(NULL, 0, npce.idleID);
+                  npce.frame = 0;
+               }
+               break;
+            case NPCC:
+               npcefDir[0] = npccpos[0] - npcepos[0];
+               npcefDir[1] = npccpos[1] - npcepos[1];
+               npce.SetDirection(npcefDir, npceuDir);
+               npce.MoveForward(5.0f);
+               if (myDist(npccpos, npcepos) < 90.0f)
+               {
+                  npce.state = IDLE;
+                  npce.SetCurrentAction(NULL, 0, npce.idleID);
+                  npce.frame = 0;
+               }
+               break;
+            case NPCD:
+               npcefDir[0] = npcdpos[0] - npcepos[0];
+               npcefDir[1] = npcdpos[1] - npcepos[1];
+               npce.SetDirection(npcefDir, npceuDir);
+               npce.MoveForward(5.0f);
+               if (myDist(npcdpos, npcepos) < 90.0f)
+               {
+                  npce.state = IDLE;
+                  npce.SetCurrentAction(NULL, 0, npce.idleID);
+                  npce.frame = 0;
+               }
+               break;
+            case NPCE:
+               npcefDir[0] = npcepos[0] - npcepos[0];
+               npcefDir[1] = npcepos[1] - npcepos[1];
+               npce.SetDirection(npcefDir, npceuDir);
+               npce.MoveForward(5.0f);
+               if (myDist(npcepos, npcepos) < 90.0f)
+               {
+                  npce.state = IDLE;
+                  npce.SetCurrentAction(NULL, 0, npce.idleID);
+                  npce.frame = 0;
+               }
+               break;
+            case NPCF:
+               npcefDir[0] = npcfpos[0] - npcepos[0];
+               npcefDir[1] = npcfpos[1] - npcepos[1];
+               npce.SetDirection(npcefDir, npceuDir);
+               npce.MoveForward(5.0f);
+               if (myDist(npcfpos, npcepos) < 90.0f)
+               {
+                  npce.state = IDLE;
+                  npce.SetCurrentAction(NULL, 0, npce.idleID);
+                  npce.frame = 0;
+               }
+               break;
+            case NPCG:
+               npcefDir[0] = npcgpos[0] - npcepos[0];
+               npcefDir[1] = npcgpos[1] - npcepos[1];
+               npce.SetDirection(npcefDir, npceuDir);
+               npce.MoveForward(5.0f);
+               if (myDist(npcgpos, npcepos) < 90.0f)
+               {
+                  npce.state = IDLE;
+                  npce.SetCurrentAction(NULL, 0, npce.idleID);
+                  npce.frame = 0;
+               }
+               break;
+            default:
+               break;
+         }
 			break;
 		case ATTACK1:
 		// normal attack 1 33 frames
@@ -3017,84 +5921,164 @@ void GameAI(int skip)
 
 			if (npce.frame == 17)
 			{
-				if (npce.isFriend && (friendID[0] == NPCE || friendID[1] == NPCE))
-				{
-					if (npca.state != DIE)
-					{
-						if(isHit(npcepos, npcapos, npcefDir, 120.0f, 40.0f))
-						{
-							npca.blood -= 30;
-							npca.state = DAMAGE;
-							npca.SetCurrentAction(NULL, 0, npca.damageID);
-							npca.frame = 0;
-						}
-					}
-					if (npcb.state != DIE)
-					{
-						if(isHit(npcepos, npcbpos, npcefDir, 120.0f, 40.0f))
-						{
-							npcb.blood -= 30;
-							npcb.state = DAMAGE;
-							npcb.SetCurrentAction(NULL, 0, npcb.damageID);
-							npcb.frame = 0;
-						}
-					}
-					if (npcc.state != DIE)
-					{
-						if(isHit(npcepos, npccpos, npcefDir, 120.0f, 40.0f))
-						{
-							npcc.blood -= 30;
-							npcc.state = DAMAGE;
-							npcc.SetCurrentAction(NULL, 0, npcc.damageID);
-							npcc.frame = 0;
-						}
-					}
-					if (npcd.state != DIE)
-					{
-						if(isHit(npcepos, npcdpos, npcefDir, 120.0f, 40.0f))
-						{
-							npcd.blood -= 30;
-							npcd.state = DAMAGE;
-							npcd.SetCurrentAction(NULL, 0, npcd.damageID);
-							npcd.frame = 0;
-						}
-					}
-					if (npcf.state != DIE)
-					{
-						if(isHit(npcepos, npcfpos, npcefDir, 120.0f, 40.0f))
-						{
-							npcf.blood -= 30;
-							npcf.state = DAMAGE;
-							npcf.SetCurrentAction(NULL, 0, npcf.damageID);
-							npcf.frame = 0;
-						}
-					}
-					if (npcg.state != DIE)
-					{
-						if(isHit(npcepos, npcgpos, npcefDir, 120.0f, 40.0f))
-						{
-							npcg.blood -= 30;
-							npcg.state = DAMAGE;
-							npcg.SetCurrentAction(NULL, 0, npcg.damageID);
-							npcg.frame = 0;
-						}
-					}
-				}
-				else
-				{
-					if (actor.state != DIE)
-					{
-						if(isHit(npcepos, pos, npcefDir, 120.0f, 40.0f))
-						{
-							actor.blood -= 30;
-							actor.state = DAMAGE;
-							actor.SetCurrentAction(NULL, 0, heavyDamagedID);
-							actor.frame = 0;
-							attackKeyLocked = true;
-							movementKeyLocked = true;
-						}		
-					}	
-				}
+				if (npce.isFriend)
+            {
+               if (npca.state != DIE && !npca.isFriend)
+               {
+                  if(isHit(npcepos, npcapos, npcefDir, 120.0f, 40.0f))
+                  {
+                     npca.blood -= 30;
+                     npca.state = DAMAGE;
+                     npca.SetCurrentAction(NULL, 0, npca.damageID);
+                     npca.frame = 0;
+                  }
+               }
+               if (npcb.state != DIE && !npcb.isFriend)
+               {
+                  if(isHit(npcepos, npcbpos, npcefDir, 120.0f, 40.0f))
+                  {
+                     npcb.blood -= 30;
+                     npcb.state = DAMAGE;
+                     npcb.SetCurrentAction(NULL, 0, npcb.damageID);
+                     npcb.frame = 0;
+                  }
+               }
+               if (npcc.state != DIE && !npcc.isFriend)
+               {
+                  if(isHit(npcepos, npccpos, npcefDir, 120.0f, 40.0f))
+                  {
+                     npcc.blood -= 30;
+                     npcc.state = DAMAGE;
+                     npcc.SetCurrentAction(NULL, 0, npcc.damageID);
+                     npcc.frame = 0;
+                  }
+               }
+               if (npcd.state != DIE && !npcd.isFriend)
+               {
+                  if(isHit(npcepos, npcdpos, npcefDir, 120.0f, 40.0f))
+                  {
+                     npcd.blood -= 30;
+                     npcd.state = DAMAGE;
+                     npcd.SetCurrentAction(NULL, 0, npcd.damageID);
+                     npcd.frame = 0;
+                  }
+               }
+               if (npce.state != DIE && !npce.isFriend)
+               {
+                  if(isHit(npcepos, npcepos, npcefDir, 120.0f, 40.0f))
+                  {
+                     npce.blood -= 30;
+                     npce.state = DAMAGE;
+                     npce.SetCurrentAction(NULL, 0, npce.damageID);
+                     npce.frame = 0;
+                  }
+               }
+               if (npcf.state != DIE && !npcf.isFriend)
+               {
+                  if(isHit(npcepos, npcfpos, npcefDir, 120.0f, 40.0f))
+                  {
+                     npcf.blood -= 30;
+                     npcf.state = DAMAGE;
+                     npcf.SetCurrentAction(NULL, 0, npcf.damageID);
+                     npcf.frame = 0;
+                  }
+               }
+               if (npcg.state != DIE && !npcg.isFriend)
+               {
+                  if(isHit(npcepos, npcgpos, npcefDir, 120.0f, 40.0f))
+                  {
+                     npcg.blood -= 30;
+                     npcg.state = DAMAGE;
+                     npcg.SetCurrentAction(NULL, 0, npcg.damageID);
+                     npcg.frame = 0;
+                  }
+               }
+            }
+            else
+            {
+               if (actor.state != DIE)
+               {
+                  if(isHit(npcepos, pos, npcefDir, 120.0f, 40.0f))
+                  {
+                     actor.blood -= 30;
+                     actor.state = DAMAGE;
+                     actor.SetCurrentAction(NULL, 0, heavyDamagedID);
+                     actor.frame = 0;
+                     attackKeyLocked = true;
+                     movementKeyLocked = true;
+                  }     
+               }
+               if (npca.state != DIE && npca.isFriend)
+               {
+                  if(isHit(npcepos, npcapos, npcefDir, 120.0f, 40.0f))
+                  {
+                     npca.blood -= 30;
+                     npca.state = DAMAGE;
+                     npca.SetCurrentAction(NULL, 0, npca.damageID);
+                     npca.frame = 0;
+                  }
+               }
+               if (npcb.state != DIE && npcb.isFriend)
+               {
+                  if(isHit(npcepos, npcbpos, npcefDir, 120.0f, 40.0f))
+                  {
+                     npcb.blood -= 30;
+                     npcb.state = DAMAGE;
+                     npcb.SetCurrentAction(NULL, 0, npcb.damageID);
+                     npcb.frame = 0;
+                  }
+               }
+               if (npcc.state != DIE && npcc.isFriend)
+               {
+                  if(isHit(npcepos, npccpos, npcefDir, 120.0f, 40.0f))
+                  {
+                     npcc.blood -= 30;
+                     npcc.state = DAMAGE;
+                     npcc.SetCurrentAction(NULL, 0, npcc.damageID);
+                     npcc.frame = 0;
+                  }
+               }
+               if (npcd.state != DIE && npcd.isFriend)
+               {
+                  if(isHit(npcepos, npcdpos, npcefDir, 120.0f, 40.0f))
+                  {
+                     npcd.blood -= 30;
+                     npcd.state = DAMAGE;
+                     npcd.SetCurrentAction(NULL, 0, npcd.damageID);
+                     npcd.frame = 0;
+                  }
+               }
+               if (npce.state != DIE && npce.isFriend)
+               {
+                  if(isHit(npcepos, npcepos, npcefDir, 120.0f, 40.0f))
+                  {
+                     npce.blood -= 30;
+                     npce.state = DAMAGE;
+                     npce.SetCurrentAction(NULL, 0, npce.damageID);
+                     npce.frame = 0;
+                  }
+               }
+               if (npcf.state != DIE && npcf.isFriend)
+               {
+                  if(isHit(npcepos, npcfpos, npcefDir, 120.0f, 40.0f))
+                  {
+                     npcf.blood -= 30;
+                     npcf.state = DAMAGE;
+                     npcf.SetCurrentAction(NULL, 0, npcf.damageID);
+                     npcf.frame = 0;
+                  }
+               }
+               if (npcg.state != DIE && npcg.isFriend)
+               {
+                  if(isHit(npcepos, npcgpos, npcefDir, 120.0f, 40.0f))
+                  {
+                     npcg.blood -= 30;
+                     npcg.state = DAMAGE;
+                     npcg.SetCurrentAction(NULL, 0, npcg.damageID);
+                     npcg.frame = 0;
+                  }
+               }
+            }
 			}
 			if (npce.frame == 32)
 			{
@@ -3105,6 +6089,176 @@ void GameAI(int skip)
 			break;
 		case ATTACK2:
 		// no attack2
+         npce.Play(ONCE, (float) skip, FALSE, TRUE);
+         npce.frame++;
+
+         if (npce.frame == 17)
+         {
+            if (npce.isFriend)
+            {
+               if (npca.state != DIE && !npca.isFriend)
+               {
+                  if(isHit(npcepos, npcapos, npcefDir, 120.0f, 40.0f))
+                  {
+                     npca.blood -= 30;
+                     npca.state = DAMAGE;
+                     npca.SetCurrentAction(NULL, 0, npca.damageID);
+                     npca.frame = 0;
+                  }
+               }
+               if (npcb.state != DIE && !npcb.isFriend)
+               {
+                  if(isHit(npcepos, npcbpos, npcefDir, 120.0f, 40.0f))
+                  {
+                     npcb.blood -= 30;
+                     npcb.state = DAMAGE;
+                     npcb.SetCurrentAction(NULL, 0, npcb.damageID);
+                     npcb.frame = 0;
+                  }
+               }
+               if (npcc.state != DIE && !npcc.isFriend)
+               {
+                  if(isHit(npcepos, npccpos, npcefDir, 120.0f, 40.0f))
+                  {
+                     npcc.blood -= 30;
+                     npcc.state = DAMAGE;
+                     npcc.SetCurrentAction(NULL, 0, npcc.damageID);
+                     npcc.frame = 0;
+                  }
+               }
+               if (npcd.state != DIE && !npcd.isFriend)
+               {
+                  if(isHit(npcepos, npcdpos, npcefDir, 120.0f, 40.0f))
+                  {
+                     npcd.blood -= 30;
+                     npcd.state = DAMAGE;
+                     npcd.SetCurrentAction(NULL, 0, npcd.damageID);
+                     npcd.frame = 0;
+                  }
+               }
+               if (npce.state != DIE && !npce.isFriend)
+               {
+                  if(isHit(npcepos, npcepos, npcefDir, 120.0f, 40.0f))
+                  {
+                     npce.blood -= 30;
+                     npce.state = DAMAGE;
+                     npce.SetCurrentAction(NULL, 0, npce.damageID);
+                     npce.frame = 0;
+                  }
+               }
+               if (npcf.state != DIE && !npcf.isFriend)
+               {
+                  if(isHit(npcepos, npcfpos, npcefDir, 120.0f, 40.0f))
+                  {
+                     npcf.blood -= 30;
+                     npcf.state = DAMAGE;
+                     npcf.SetCurrentAction(NULL, 0, npcf.damageID);
+                     npcf.frame = 0;
+                  }
+               }
+               if (npcg.state != DIE && !npcg.isFriend)
+               {
+                  if(isHit(npcepos, npcgpos, npcefDir, 120.0f, 40.0f))
+                  {
+                     npcg.blood -= 30;
+                     npcg.state = DAMAGE;
+                     npcg.SetCurrentAction(NULL, 0, npcg.damageID);
+                     npcg.frame = 0;
+                  }
+               }
+            }
+            else
+            {
+               if (actor.state != DIE)
+               {
+                  if(isHit(npcepos, pos, npcefDir, 120.0f, 40.0f))
+                  {
+                     actor.blood -= 30;
+                     actor.state = DAMAGE;
+                     actor.SetCurrentAction(NULL, 0, heavyDamagedID);
+                     actor.frame = 0;
+                     attackKeyLocked = true;
+                     movementKeyLocked = true;
+                  }     
+               }
+               if (npca.state != DIE && npca.isFriend)
+               {
+                  if(isHit(npcepos, npcapos, npcefDir, 120.0f, 40.0f))
+                  {
+                     npca.blood -= 30;
+                     npca.state = DAMAGE;
+                     npca.SetCurrentAction(NULL, 0, npca.damageID);
+                     npca.frame = 0;
+                  }
+               }
+               if (npcb.state != DIE && npcb.isFriend)
+               {
+                  if(isHit(npcepos, npcbpos, npcefDir, 120.0f, 40.0f))
+                  {
+                     npcb.blood -= 30;
+                     npcb.state = DAMAGE;
+                     npcb.SetCurrentAction(NULL, 0, npcb.damageID);
+                     npcb.frame = 0;
+                  }
+               }
+               if (npcc.state != DIE && npcc.isFriend)
+               {
+                  if(isHit(npcepos, npccpos, npcefDir, 120.0f, 40.0f))
+                  {
+                     npcc.blood -= 30;
+                     npcc.state = DAMAGE;
+                     npcc.SetCurrentAction(NULL, 0, npcc.damageID);
+                     npcc.frame = 0;
+                  }
+               }
+               if (npcd.state != DIE && npcd.isFriend)
+               {
+                  if(isHit(npcepos, npcdpos, npcefDir, 120.0f, 40.0f))
+                  {
+                     npcd.blood -= 30;
+                     npcd.state = DAMAGE;
+                     npcd.SetCurrentAction(NULL, 0, npcd.damageID);
+                     npcd.frame = 0;
+                  }
+               }
+               if (npce.state != DIE && npce.isFriend)
+               {
+                  if(isHit(npcepos, npcepos, npcefDir, 120.0f, 40.0f))
+                  {
+                     npce.blood -= 30;
+                     npce.state = DAMAGE;
+                     npce.SetCurrentAction(NULL, 0, npce.damageID);
+                     npce.frame = 0;
+                  }
+               }
+               if (npcf.state != DIE && npcf.isFriend)
+               {
+                  if(isHit(npcepos, npcfpos, npcefDir, 120.0f, 40.0f))
+                  {
+                     npcf.blood -= 30;
+                     npcf.state = DAMAGE;
+                     npcf.SetCurrentAction(NULL, 0, npcf.damageID);
+                     npcf.frame = 0;
+                  }
+               }
+               if (npcg.state != DIE && npcg.isFriend)
+               {
+                  if(isHit(npcepos, npcgpos, npcefDir, 120.0f, 40.0f))
+                  {
+                     npcg.blood -= 30;
+                     npcg.state = DAMAGE;
+                     npcg.SetCurrentAction(NULL, 0, npcg.damageID);
+                     npcg.frame = 0;
+                  }
+               }
+            }
+         }
+         if (npce.frame == 32)
+         {
+            npce.state = IDLE;
+            npce.SetCurrentAction(NULL, 0, npce.idleID); 
+            npce.frame = 0;
+         }
 			break;
 		case DAMAGE:
 		// no damage
@@ -3122,19 +6276,30 @@ void GameAI(int skip)
 			}
 			break;
 		case DIE:
-		// die
+		// die 71
 			npce.Play(ONCE, (float) skip, FALSE, TRUE);
 			if (!npce.isFriend)
 			{
 				npce.frame++;
-				if (npce.frame == 300)
+				if (npce.frame == 100)
 				{
-					npce.state = IDLE;
-					npce.SetCurrentAction(NULL, 0, npce.idleID);
-					npce.frame = 0;
-					npce.blood = npce.fullBlood;
+					if (teammateID[0] == NONE)
+					{
+						teammateID[0] = NPCE;
+						npce.state = IDLE;
+						npce.SetCurrentAction(NULL, 0, npce.idleID);
+						npce.frame = 0;
+						npce.blood = npce.fullBlood;
+					}
+					else if (teammateID[1] == NONE)
+					{
+						teammateID[1] = NPCE;
+						npce.state = IDLE;
+						npce.SetCurrentAction(NULL, 0, npce.idleID);
+						npce.frame = 0;
+						npce.blood = npce.fullBlood;
+					}					
 					npce.isFriend = true;
-					friendID[1] = NPCE;
 				}
 			}
 			break;
@@ -3145,11 +6310,11 @@ void GameAI(int skip)
 	npce.BB();
 
 	/*------------------------------------------
-	 ||||    || |||||||||   ||||||||  
-	 || ||   || ||      || ||      || 
-	 ||  ||  || |||||||||  ||         f
-	 ||   || || ||         ||      || 
-	 ||    |||| ||          ||||||||  
+	 ||||    || |||||||||   ||||||||  ||||||||||
+	 || ||   || ||      || ||      || ||
+	 ||  ||  || |||||||||  ||         ||||||||
+	 ||   || || ||         ||      || ||
+	 ||    |||| ||          ||||||||  ||
 	 ------------------------------------------*/
 
 	if (npcf.blood <= 0 && npcf.state != DIE)
@@ -3157,6 +6322,147 @@ void GameAI(int skip)
 		npcf.state = DIE;
 		npcf.SetCurrentAction(NULL, 0, npcf.dieID);
 	}
+
+   if (npcf.state != DIE)
+   {
+      if (npcf.isFriend)
+      {
+         if ((teammateID[0] == NPCF && isFollow[0]) || (teammateID[1] == NPCF && isFollow[1]))
+         {
+            npcf.target = ACTOR;
+         }
+         else
+         {
+            switch(npcf.target)
+            {
+               case NONE:
+                  npcf.target = nearestEnemy(NPCF, npcfpos);
+                  if (npcf.target == NONE)
+                  {
+                     npcf.target = ACTOR;
+                  }
+                  break;
+               case ACTOR:
+                  if (actor.state == DIE)
+                  {
+                     npcf.target = NONE;
+                  }
+                  if ((teammateID[0] == NPCF && !isFollow[0]) || (teammateID[1] == NPCF && !isFollow[1]))
+                  {
+                     npcf.target = nearestEnemy(NPCF, npcfpos);
+                     if (npcf.target == NONE)
+                     {
+                        npcf.target = ACTOR;
+                     }
+                  }
+                  break;
+               case NPCA:
+                  if (npca.state == DIE)
+                  {
+                     npcf.target = NONE;
+                  }
+                  break;
+               case NPCB:
+                  if (npcb.state == DIE)
+                  {
+                     npcf.target = NONE;
+                  }
+                  break;
+               case NPCC:
+                  if (npcc.state == DIE)
+                  {
+                     npcf.target = NONE;
+                  }
+                  break;
+               case NPCD:
+                  if (npcd.state == DIE)
+                  {
+                     npcf.target = NONE;
+                  }
+                  break;
+               case NPCE:
+                  if (npce.state == DIE)
+                  {
+                     npcf.target = NONE;
+                  }
+                  break;
+               case NPCF:
+                  if (npcf.state == DIE)
+                  {
+                     npcf.target = NONE;
+                  }
+                  break;
+               case NPCG:
+                  if (npcg.state == DIE)
+                  {
+                     npcf.target = NONE;
+                  }
+                  break;
+               default:
+                  break;
+            }
+         }
+      }
+      else
+      {
+         switch(npcf.target)
+         {
+            case NONE:
+               npcf.target = nearestFriend(NPCF, npcfpos);
+               break;
+            case ACTOR:
+               if (actor.state == DIE)
+               {
+                  npcf.target = NONE;
+               }
+               break;
+            case NPCA:
+               if (npca.state == DIE)
+               {
+                  npcf.target = NONE;
+               }
+               break;
+            case NPCB:
+               if (npcb.state == DIE)
+               {
+                  npcf.target = NONE;
+               }
+               break;
+            case NPCC:
+               if (npcc.state == DIE)
+               {
+                  npcf.target = NONE;
+               }
+               break;
+            case NPCD:
+               if (npcd.state == DIE)
+               {
+                  npcf.target = NONE;
+               }
+               break;
+            case NPCE:
+               if (npce.state == DIE)
+               {
+                  npcf.target = NONE;
+               }
+               break;
+            case NPCF:
+               if (npcf.state == DIE)
+               {
+                  npcf.target = NONE;
+               }
+               break;
+            case NPCG:
+               if (npcg.state == DIE)
+               {
+                  npcf.target = NONE;
+               }
+               break;
+            default:
+               break;
+         }
+      }
+   }
 
 	/*
 		npcf.state:
@@ -3172,466 +6478,383 @@ void GameAI(int skip)
 		case IDLE:
 		// combat idle
 			npcf.Play(LOOP, (float) skip, FALSE, TRUE);
-			if (npcf.isFriend)
-			{
-				if ((isFollow[0] && friendID[0] == NPCF) || (isFollow[1] && friendID[1] == NPCF))
-				{
-					if (myDist(pos, npcfpos) >= 100.0f)
-					{
-						npcf.state = RUN;
-						npcf.SetCurrentAction(NULL, 0, npcf.runID);
-						npcf.frame = 0;
-						npcf.target = ACTOR;
-					}
-				}
-				else if ((!isFollow[0] && friendID[0] == NPCF) || (!isFollow[1] && friendID[1] == NPCF))
-				{
-					if (myDist(npcfpos, npcapos) <= 1000.0f && myDist(npcfpos, npcapos) >= 100.0f && npca.state != DIE && !npca.isFriend)
-					{
-						npcf.state = RUN;
-						npcf.SetCurrentAction(NULL, 0, npcf.runID);
-						npcf.frame = 0;
-						npcf.target = NPCA;
-					}
-					else if (myDist(npcfpos, npcapos) < 100.0f  && npca.state != DIE && !npca.isFriend)
-					{
-						npcf.wait++;
-						npcffDir[0] = npcapos[0] - npcfpos[0];
-						npcffDir[1] = npcapos[1] - npcfpos[1];
-						npcf.SetDirection(npcffDir, npcfuDir);
-						if (npcf.wait == 50)
-						{
-							npcf.state = ATTACK1;
-							npcf.SetCurrentAction(NULL, 0, npcf.attack1ID);
-							npcf.frame = 0;
-							npcf.target = NPCA;
-							npcf.wait = 0;
-						}
-					}
-					else if (myDist(npcfpos, npcbpos) <= 1000.0f && myDist(npcfpos, npcbpos) >= 100.0f && npcb.state != DIE && !npcb.isFriend)
-					{
-						npcf.state = RUN;
-						npcf.SetCurrentAction(NULL, 0, npcf.runID);
-						npcf.frame = 0;
-						npcf.target = NPCB;
-					}
-					else if (myDist(npcfpos, npcbpos) < 100.0f  && npcb.state != DIE && !npcb.isFriend)
-					{
-						npcf.wait++;
-						npcffDir[0] = npcbpos[0] - npcfpos[0];
-						npcffDir[1] = npcbpos[1] - npcfpos[1];
-						npcf.SetDirection(npcffDir, npcfuDir);
-						if (npcf.wait == 50)
-						{
-							npcf.state = ATTACK1;
-							npcf.SetCurrentAction(NULL, 0, npcf.attack1ID);
-							npcf.frame = 0;
-							npcf.target = NPCB;
-							npcf.wait = 0;
-						}
-					}
-					else if (myDist(npcfpos, npccpos) <= 1000.0f && myDist(npcfpos, npccpos) >= 100.0f && npcc.state != DIE && !npcc.isFriend)
-					{
-						npcf.state = RUN;
-						npcf.SetCurrentAction(NULL, 0, npcf.runID);
-						npcf.frame = 0;
-						npcf.target = NPCC;
-					}
-					else if (myDist(npcfpos, npccpos) < 100.0f  && npcc.state != DIE && !npcc.isFriend)
-					{
-						npcf.wait++;
-						npcffDir[0] = npccpos[0] - npcfpos[0];
-						npcffDir[1] = npccpos[1] - npcfpos[1];
-						npcf.SetDirection(npcffDir, npcfuDir);
-						if (npcf.wait == 50)
-						{
-							npcf.state = ATTACK1;
-							npcf.SetCurrentAction(NULL, 0, npcf.attack1ID);
-							npcf.frame = 0;
-							npcf.target = NPCC;
-							npcf.wait = 0;
-						}
-					}
-					else if (myDist(npcfpos, npcdpos) <= 1000.0f && myDist(npcfpos, npcdpos) >= 100.0f && npcd.state != DIE && !npcd.isFriend)
-					{
-						npcf.state = RUN;
-						npcf.SetCurrentAction(NULL, 0, npcf.runID);
-						npcf.frame = 0;
-						npcf.target = NPCF;
-					}
-					else if (myDist(npcfpos, npcdpos) < 100.0f  && npcd.state != DIE && !npcd.isFriend)
-					{
-						npcf.wait++;
-						npcffDir[0] = npcdpos[0] - npcfpos[0];
-						npcffDir[1] = npcdpos[1] - npcfpos[1];
-						npcf.SetDirection(npcffDir, npcfuDir);
-						if (npcf.wait == 50)
-						{
-							npcf.state = ATTACK1;
-							npcf.SetCurrentAction(NULL, 0, npcf.attack1ID);
-							npcf.frame = 0;
-							npcf.target = NPCF;
-							npcf.wait = 0;
-						}
-					}
-					else if (myDist(npcfpos, npcepos) <= 1000.0f && myDist(npcfpos, npcepos) >= 100.0f && npce.state != DIE && !npce.isFriend)
-					{
-						npcf.state = RUN;
-						npcf.SetCurrentAction(NULL, 0, npcf.runID);
-						npcf.frame = 0;
-						npcf.target = NPCE;
-					}
-					else if (myDist(npcfpos, npcepos) < 100.0f  && npce.state != DIE && !npce.isFriend)
-					{
-						npcf.wait++;
-						npcffDir[0] = npcepos[0] - npcfpos[0];
-						npcffDir[1] = npcepos[1] - npcfpos[1];
-						npcf.SetDirection(npcffDir, npcfuDir);
-						if (npcf.wait == 50)
-						{
-							npcf.state = ATTACK1;
-							npcf.SetCurrentAction(NULL, 0, npcf.attack1ID);
-							npcf.frame = 0;
-							npcf.target = NPCE;
-							npcf.wait = 0;
-						}
-					}
-					else if (myDist(npcfpos, npcgpos) <= 1000.0f && myDist(npcfpos, npcgpos) >= 100.0f && npcg.state != DIE && !npcg.isFriend)
-					{
-						npcf.state = RUN;
-						npcf.SetCurrentAction(NULL, 0, npcf.runID);
-						npcf.frame = 0;
-						npcf.target = NPCG;
-					}
-					else if (myDist(npcfpos, npcgpos) < 100.0f  && npcg.state != DIE && !npcg.isFriend)
-					{
-						npcf.wait++;
-						npcffDir[0] = npcgpos[0] - npcfpos[0];
-						npcffDir[1] = npcgpos[1] - npcfpos[1];
-						npcf.SetDirection(npcffDir, npcfuDir);
-						if (npcf.wait == 50)
-						{
-							npcf.state = ATTACK1;
-							npcf.SetCurrentAction(NULL, 0, npcf.attack1ID);
-							npcf.frame = 0;
-							npcf.target = NPCG;
-							npcf.wait = 0;
-						}
-					}
-					else if (myDist(pos, npcfpos) >= 100.0f)
-					{
-						npcf.state = RUN;
-						npcf.SetCurrentAction(NULL, 0, npcf.runID);
-						npcf.frame = 0;
-						npcf.target = ACTOR;
-					}
-				}
-			}
-			else
-			{
-				if (myDist(npcfpos, npcapos) <= 1000.0f && myDist(npcfpos, npcapos) >= 100.0f && npca.state != DIE && npca.isFriend)
-					{
-						npcf.state = RUN;
-						npcf.SetCurrentAction(NULL, 0, npcf.runID);
-						npcf.frame = 0;
-						npcf.target = NPCA;
-					}
-					else if (myDist(npcfpos, npcapos) < 100.0f  && npca.state != DIE && npca.isFriend)
-					{
-						npcf.wait++;
-						npcffDir[0] = npcapos[0] - npcfpos[0];
-						npcffDir[1] = npcapos[1] - npcfpos[1];
-						npcf.SetDirection(npcffDir, npcfuDir);
-						if (npcf.wait == 50)
-						{
-							npcf.state = ATTACK1;
-							npcf.SetCurrentAction(NULL, 0, npcf.attack1ID);
-							npcf.frame = 0;
-							npcf.target = NPCA;
-							npcf.wait = 0;
-						}
-					}
-					else if (myDist(npcfpos, npcbpos) <= 1000.0f && myDist(npcfpos, npcbpos) >= 100.0f && npcb.state != DIE && npcb.isFriend)
-					{
-						npcf.state = RUN;
-						npcf.SetCurrentAction(NULL, 0, npcf.runID);
-						npcf.frame = 0;
-						npcf.target = NPCB;
-					}
-					else if (myDist(npcfpos, npcbpos) < 100.0f  && npcb.state != DIE && npcb.isFriend)
-					{
-						npcf.wait++;
-						npcffDir[0] = npcbpos[0] - npcfpos[0];
-						npcffDir[1] = npcbpos[1] - npcfpos[1];
-						npcf.SetDirection(npcffDir, npcfuDir);
-						if (npcf.wait == 50)
-						{
-							npcf.state = ATTACK1;
-							npcf.SetCurrentAction(NULL, 0, npcf.attack1ID);
-							npcf.frame = 0;
-							npcf.target = NPCB;
-							npcf.wait = 0;
-						}
-					}
-					else if (myDist(npcfpos, npccpos) <= 1000.0f && myDist(npcfpos, npccpos) >= 100.0f && npcc.state != DIE && npcc.isFriend)
-					{
-						npcf.state = RUN;
-						npcf.SetCurrentAction(NULL, 0, npcf.runID);
-						npcf.frame = 0;
-						npcf.target = NPCC;
-					}
-					else if (myDist(npcfpos, npccpos) < 100.0f  && npcc.state != DIE && npcc.isFriend)
-					{
-						npcf.wait++;
-						npcffDir[0] = npccpos[0] - npcfpos[0];
-						npcffDir[1] = npccpos[1] - npcfpos[1];
-						npcf.SetDirection(npcffDir, npcfuDir);
-						if (npcf.wait == 50)
-						{
-							npcf.state = ATTACK1;
-							npcf.SetCurrentAction(NULL, 0, npcf.attack1ID);
-							npcf.frame = 0;
-							npcf.target = NPCC;
-							npcf.wait = 0;
-						}
-					}
-					else if (myDist(npcfpos, npcdpos) <= 1000.0f && myDist(npcfpos, npcdpos) >= 100.0f && npcd.state != DIE && npcd.isFriend)
-					{
-						npcf.state = RUN;
-						npcf.SetCurrentAction(NULL, 0, npcf.runID);
-						npcf.frame = 0;
-						npcf.target = NPCF;
-					}
-					else if (myDist(npcfpos, npcdpos) < 100.0f  && npcd.state != DIE && npcd.isFriend)
-					{
-						npcf.wait++;
-						npcffDir[0] = npcdpos[0] - npcfpos[0];
-						npcffDir[1] = npcdpos[1] - npcfpos[1];
-						npcf.SetDirection(npcffDir, npcfuDir);
-						if (npcf.wait == 50)
-						{
-							npcf.state = ATTACK1;
-							npcf.SetCurrentAction(NULL, 0, npcf.attack1ID);
-							npcf.frame = 0;
-							npcf.target = NPCF;
-							npcf.wait = 0;
-						}
-					}
-					else if (myDist(npcfpos, npcepos) <= 1000.0f && myDist(npcfpos, npcepos) >= 100.0f && npce.state != DIE && npce.isFriend)
-					{
-						npcf.state = RUN;
-						npcf.SetCurrentAction(NULL, 0, npcf.runID);
-						npcf.frame = 0;
-						npcf.target = NPCE;
-					}
-					else if (myDist(npcfpos, npcepos) < 100.0f  && npce.state != DIE && npce.isFriend)
-					{
-						npcf.wait++;
-						npcffDir[0] = npcepos[0] - npcfpos[0];
-						npcffDir[1] = npcepos[1] - npcfpos[1];
-						npcf.SetDirection(npcffDir, npcfuDir);
-						if (npcf.wait == 50)
-						{
-							npcf.state = ATTACK1;
-							npcf.SetCurrentAction(NULL, 0, npcf.attack1ID);
-							npcf.frame = 0;
-							npcf.target = NPCE;
-							npcf.wait = 0;
-						}
-					}
-					else if (myDist(npcfpos, npcgpos) <= 1000.0f && myDist(npcfpos, npcgpos) >= 100.0f && npcg.state != DIE && npcg.isFriend)
-					{
-						npcf.state = RUN;
-						npcf.SetCurrentAction(NULL, 0, npcf.runID);
-						npcf.frame = 0;
-						npcf.target = NPCG;
-					}
-					else if (myDist(npcfpos, npcgpos) < 100.0f  && npcg.state != DIE && npcg.isFriend)
-					{
-						npcf.wait++;
-						npcffDir[0] = npcgpos[0] - npcfpos[0];
-						npcffDir[1] = npcgpos[1] - npcfpos[1];
-						npcf.SetDirection(npcffDir, npcfuDir);
-						if (npcf.wait == 50)
-						{
-							npcf.state = ATTACK1;
-							npcf.SetCurrentAction(NULL, 0, npcf.attack1ID);
-							npcf.frame = 0;
-							npcf.target = NPCG;
-							npcf.wait = 0;
-						}
-					}
-					else if (myDist(pos, npcfpos) <= 1000.0f && myDist(pos, npcfpos) >= 100.0f)
-				{
-					npcf.state = RUN;
-					npcf.SetCurrentAction(NULL, 0, npcf.runID);
-					npcf.frame = 0;
-					npcf.target = ACTOR;
-				}
-				else if (myDist(pos, npcfpos) < 100.0f  && actor.state != DIE)
-				{
-					npcf.wait++;
-					npcffDir[0] = pos[0] - npcfpos[0];
-					npcffDir[1] = pos[1] - npcfpos[1];
-					npcf.SetDirection(npcffDir, npcfuDir);
-					if (npcf.wait == 50)
-					{
-						npcf.state = ATTACK1;
-						npcf.SetCurrentAction(NULL, 0, npcf.attack1ID);
-						npcf.frame = 0;
-						npcf.target = ACTOR;
-						npcf.wait = 0;
-					}
-				}
-			}
+			switch (npcf.target)
+         {
+            case NONE:
+               break;
+            case ACTOR:
+               if (npcf.isFriend)
+               {
+                  if (myDist(pos, npcfpos) >= 100.0f)
+                  {
+                     npcf.state = RUN;
+                     npcf.SetCurrentAction(NULL, 0, npcf.runID);
+                     npcf.frame = 0;
+                  }
+               }
+               else
+               {
+                  if (myDist(pos, npcfpos) <= 500.0f && myDist(pos, npcfpos) >= 100.0f)
+                  {  
+                     npcf.state = RUN;
+                     npcf.SetCurrentAction(NULL, 0, npcf.runID);
+                     npcf.frame = 0;
+                  }
+                  else if (myDist(pos, npcfpos) < 100.0f  && actor.state != DIE)
+                  {
+                     npcf.wait1++;
+                     npcffDir[0] = pos[0] - npcfpos[0];
+                     npcffDir[1] = pos[1] - npcfpos[1];
+                     npcf.SetDirection(npcffDir, npcfuDir);
+                     if (npcf.wait1 % 50 == 0)
+                     {
+                        npcf.wait2++;
+                        if (npcf.wait2 % 2 == 0)
+                        {
+                           npcf.state = ATTACK2;
+                           npcf.SetCurrentAction(NULL, 0, npcf.attack2ID);
+                           npcf.frame = 0;
+                        }
+                        else
+                        {
+                           npcf.state = ATTACK1;
+                           npcf.SetCurrentAction(NULL, 0, npcf.attack1ID);
+                           npcf.frame = 0;
+                        }
+                     }
+                  }
+               }
+               break;
+            case NPCA:
+               if (myDist(npcfpos, npcapos) <= 600.0f && myDist(npcfpos, npcapos) >= 100.0f)
+               {
+                  npcf.state = RUN;
+                  npcf.SetCurrentAction(NULL, 0, npcf.runID);
+                  npcf.frame = 0;
+               }
+               else if (myDist(npcfpos, npcapos) < 100.0f)
+               {
+                  npcf.wait1++;
+                  npcffDir[0] = npcapos[0] - npcfpos[0];
+                  npcffDir[1] = npcapos[1] - npcfpos[1];
+                  npcf.SetDirection(npcffDir, npcfuDir);
+                  if (npcf.wait1 % 50 == 0)
+                  {
+                     npcf.wait1++;
+                     if (npcf.wait2 % 2 == 0)
+                     {
+                        npcf.state = ATTACK2;
+                        npcf.SetCurrentAction(NULL, 0, npcf.attack2ID);
+                        npcf.frame = 0;
+                     }
+                     else
+                     {
+                        npcf.state = ATTACK1;
+                        npcf.SetCurrentAction(NULL, 0, npcf.attack1ID);
+                        npcf.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCB:
+               if (myDist(npcfpos, npcbpos) <= 600.0f && myDist(npcfpos, npcbpos) >= 100.0f)
+               {
+                  npcf.state = RUN;
+                  npcf.SetCurrentAction(NULL, 0, npcf.runID);
+                  npcf.frame = 0;
+               }
+               else if (myDist(npcfpos, npcbpos) < 100.0f)
+               {
+                  npcf.wait1++;
+                  npcffDir[0] = npcbpos[0] - npcfpos[0];
+                  npcffDir[1] = npcbpos[1] - npcfpos[1];
+                  npcf.SetDirection(npcffDir, npcfuDir);
+                  if (npcf.wait1 % 50 == 0)
+                  {
+                     npcf.wait1++;
+                     if (npcf.wait2 % 2 == 0)
+                     {
+                        npcf.state = ATTACK2;
+                        npcf.SetCurrentAction(NULL, 0, npcf.attack2ID);
+                        npcf.frame = 0;
+                     }
+                     else
+                     {
+                        npcf.state = ATTACK1;
+                        npcf.SetCurrentAction(NULL, 0, npcf.attack1ID);
+                        npcf.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCC:
+               if (myDist(npcfpos, npccpos) <= 600.0f && myDist(npcfpos, npccpos) >= 100.0f)
+               {
+                  npcf.state = RUN;
+                  npcf.SetCurrentAction(NULL, 0, npcf.runID);
+                  npcf.frame = 0;
+               }
+               else if (myDist(npcfpos, npccpos) < 100.0f)
+               {
+                  npcf.wait1++;
+                  npcffDir[0] = npccpos[0] - npcfpos[0];
+                  npcffDir[1] = npccpos[1] - npcfpos[1];
+                  npcf.SetDirection(npcffDir, npcfuDir);
+                  if (npcf.wait1 % 50 == 0)
+                  {
+                     npcf.wait1++;
+                     if (npcf.wait2 % 2 == 0)
+                     {
+                        npcf.state = ATTACK2;
+                        npcf.SetCurrentAction(NULL, 0, npcf.attack2ID);
+                        npcf.frame = 0;
+                     }
+                     else
+                     {
+                        npcf.state = ATTACK1;
+                        npcf.SetCurrentAction(NULL, 0, npcf.attack1ID);
+                        npcf.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCD:
+               if (myDist(npcfpos, npcdpos) <= 600.0f && myDist(npcfpos, npcdpos) >= 100.0f)
+               {
+                  npcf.state = RUN;
+                  npcf.SetCurrentAction(NULL, 0, npcf.runID);
+                  npcf.frame = 0;
+               }
+               else if (myDist(npcfpos, npcdpos) < 100.0f)
+               {
+                  npcf.wait1++;
+                  npcffDir[0] = npcdpos[0] - npcfpos[0];
+                  npcffDir[1] = npcdpos[1] - npcfpos[1];
+                  npcf.SetDirection(npcffDir, npcfuDir);
+                  if (npcf.wait1 % 50 == 0)
+                  {
+                     npcf.wait1++;
+                     if (npcf.wait2 % 2 == 0)
+                     {
+                        npcf.state = ATTACK2;
+                        npcf.SetCurrentAction(NULL, 0, npcf.attack2ID);
+                        npcf.frame = 0;
+                     }
+                     else
+                     {
+                        npcf.state = ATTACK1;
+                        npcf.SetCurrentAction(NULL, 0, npcf.attack1ID);
+                        npcf.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCE:
+               if (myDist(npcfpos, npcepos) <= 600.0f && myDist(npcfpos, npcepos) >= 100.0f)
+               {
+                  npcf.state = RUN;
+                  npcf.SetCurrentAction(NULL, 0, npcf.runID);
+                  npcf.frame = 0;
+               }
+               else if (myDist(npcfpos, npcepos) < 100.0f)
+               {
+                  npcf.wait1++;
+                  npcffDir[0] = npcepos[0] - npcfpos[0];
+                  npcffDir[1] = npcepos[1] - npcfpos[1];
+                  npcf.SetDirection(npcffDir, npcfuDir);
+                  if (npcf.wait1 % 50 == 0)
+                  {
+                     npcf.wait1++;
+                     if (npcf.wait2 % 2 == 0)
+                     {
+                        npcf.state = ATTACK2;
+                        npcf.SetCurrentAction(NULL, 0, npcf.attack2ID);
+                        npcf.frame = 0;
+                     }
+                     else
+                     {
+                        npcf.state = ATTACK1;
+                        npcf.SetCurrentAction(NULL, 0, npcf.attack1ID);
+                        npcf.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCF:
+               if (myDist(npcfpos, npcfpos) <= 600.0f && myDist(npcfpos, npcfpos) >= 100.0f)
+               {
+                  npcf.state = RUN;
+                  npcf.SetCurrentAction(NULL, 0, npcf.runID);
+                  npcf.frame = 0;
+               }
+               else if (myDist(npcfpos, npcfpos) < 100.0f)
+               {
+                  npcf.wait1++;
+                  npcffDir[0] = npcfpos[0] - npcfpos[0];
+                  npcffDir[1] = npcfpos[1] - npcfpos[1];
+                  npcf.SetDirection(npcffDir, npcfuDir);
+                  if (npcf.wait1 % 50 == 0)
+                  {
+                     npcf.wait1++;
+                     if (npcf.wait2 % 2 == 0)
+                     {
+                        npcf.state = ATTACK2;
+                        npcf.SetCurrentAction(NULL, 0, npcf.attack2ID);
+                        npcf.frame = 0;
+                     }
+                     else
+                     {
+                        npcf.state = ATTACK1;
+                        npcf.SetCurrentAction(NULL, 0, npcf.attack1ID);
+                        npcf.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCG:
+               if (myDist(npcfpos, npcgpos) <= 600.0f && myDist(npcfpos, npcgpos) >= 100.0f)
+               {
+                  npcf.state = RUN;
+                  npcf.SetCurrentAction(NULL, 0, npcf.runID);
+                  npcf.frame = 0;
+               }
+               else if (myDist(npcfpos, npcgpos) < 100.0f)
+               {
+                  npcf.wait1++;
+                  npcffDir[0] = npcgpos[0] - npcfpos[0];
+                  npcffDir[1] = npcgpos[1] - npcfpos[1];
+                  npcf.SetDirection(npcffDir, npcfuDir);
+                  if (npcf.wait1 % 50 == 0)
+                  {
+                     npcf.wait1++;
+                     if (npcf.wait2 % 2 == 0)
+                     {
+                        npcf.state = ATTACK2;
+                        npcf.SetCurrentAction(NULL, 0, npcf.attack2ID);
+                        npcf.frame = 0;
+                     }
+                     else
+                     {
+                        npcf.state = ATTACK1;
+                        npcf.SetCurrentAction(NULL, 0, npcf.attack1ID);
+                        npcf.frame = 0;
+                     }
+                  }
+               }
+               break;
+            default:
+               break;
+         }
 			break;
 		case RUN:
 		// run
 			npcf.Play(LOOP, (float) skip, FALSE, TRUE);
-				if ((friendID[0] == NPCF && isFollow[0]) || (friendID[1] == NPCF && isFollow[1]))
-				{
-					npcf.target = ACTOR;
-				}
-				if(npcf.target == ACTOR)
-				{
-					npcffDir[0] = pos[0] - npcfpos[0];
-					npcffDir[1] = pos[1] - npcfpos[1];
-					npcf.SetDirection(npcffDir, npcfuDir);
-					if (npcf.isFriend)
-					{
-						npcf.MoveForward(5.0f);
-					}
-					else
-					{
-						npcf.MoveForward(5.0f, TRUE, FALSE, FALSE, TRUE);
-					}
-					if (myDist(pos, npcfpos) < 90.0f)
-					{
-						npcf.state = IDLE;
-						npcf.SetCurrentAction(NULL, 0, npcf.idleID);
-						npcf.frame = 0;
-					}
-				}
-				else if (npcf.target == NPCA)
-				{
-					npcffDir[0] = npcapos[0] - npcfpos[0];
-					npcffDir[1] = npcapos[1] - npcfpos[1];
-					npcf.SetDirection(npcffDir, npcfuDir);
-					if (npcf.isFriend)
-					{
-						npcf.MoveForward(5.0f);
-					}
-					else
-					{
-						npcf.MoveForward(5.0f, TRUE, FALSE, FALSE, TRUE);
-					}
-					if (myDist(npcapos, npcfpos) < 90.0f)
-					{
-						npcf.state = IDLE;
-						npcf.SetCurrentAction(NULL, 0, npcf.idleID);
-						npcf.frame = 0;
-					}
-				}
-				else if (npcf.target == NPCB)
-				{
-					npcffDir[0] = npcbpos[0] - npcfpos[0];
-					npcffDir[1] = npcbpos[1] - npcfpos[1];
-					npcf.SetDirection(npcffDir, npcfuDir);
-					if (npcf.isFriend)
-					{
-						npcf.MoveForward(5.0f);
-					}
-					else
-					{
-						npcf.MoveForward(5.0f, TRUE, FALSE, FALSE, TRUE);
-					}
-					if (myDist(npcbpos, npcfpos) < 90.0f)
-					{
-						npcf.state = IDLE;
-						npcf.SetCurrentAction(NULL, 0, npcf.idleID);
-						npcf.frame = 0;
-					}
-				}
-				else if (npcf.target == NPCC)
-				{
-					npcffDir[0] = npccpos[0] - npcfpos[0];
-					npcffDir[1] = npccpos[1] - npcfpos[1];
-					npcf.SetDirection(npcffDir, npcfuDir);
-					if (npcf.isFriend)
-					{
-						npcf.MoveForward(5.0f);
-					}
-					else
-					{
-						npcf.MoveForward(5.0f, TRUE, FALSE, FALSE, TRUE);
-					}
-					if (myDist(npccpos, npcfpos) < 90.0f)
-					{
-						npcf.state = IDLE;
-						npcf.SetCurrentAction(NULL, 0, npcf.idleID);
-						npcf.frame = 0;
-					}
-				}
-				else if (npcf.target == NPCD)
-				{
-					npcffDir[0] = npcdpos[0] - npcfpos[0];
-					npcffDir[1] = npcdpos[1] - npcfpos[1];
-					npcf.SetDirection(npcffDir, npcfuDir);
-					if (npcf.isFriend)
-					{
-						npcf.MoveForward(5.0f);
-					}
-					else
-					{
-						npcf.MoveForward(5.0f, TRUE, FALSE, FALSE, TRUE);
-					}
-					if (myDist(npcdpos, npcfpos) < 90.0f)
-					{
-						npcf.state = IDLE;
-						npcf.SetCurrentAction(NULL, 0, npcf.idleID);
-						npcf.frame = 0;
-					}
-				}
-				else if (npcf.target == NPCE)
-				{
-					npcffDir[0] = npcepos[0] - npcfpos[0];
-					npcffDir[1] = npcepos[1] - npcfpos[1];
-					npcf.SetDirection(npcffDir, npcfuDir);
-					if (npcf.isFriend)
-					{
-						npcf.MoveForward(5.0f);
-					}
-					else
-					{
-						npcf.MoveForward(5.0f, TRUE, FALSE, FALSE, TRUE);
-					}
-					if (myDist(npcepos, npcfpos) < 90.0f)
-					{
-						npcf.state = IDLE;
-						npcf.SetCurrentAction(NULL, 0, npcf.idleID);
-						npcf.frame = 0;
-					}
-				}
-				else if (npcf.target == NPCG)
-				{
-					npcffDir[0] = npcgpos[0] - npcfpos[0];
-					npcffDir[1] = npcgpos[1] - npcfpos[1];
-					npcf.SetDirection(npcffDir, npcfuDir);
-					if (npcf.isFriend)
-					{
-						npcf.MoveForward(5.0f);
-					}
-					else
-					{
-						npcf.MoveForward(5.0f, TRUE, FALSE, FALSE, TRUE);
-					}
-					if (myDist(npcgpos, npcfpos) < 90.0f)
-					{
-						npcf.state = IDLE;
-						npcf.SetCurrentAction(NULL, 0, npcf.idleID);
-						npcf.frame = 0;
-					}
-				}
+			switch(npcf.target)
+         {
+            case NONE:
+               npcf.state = IDLE;
+               npcf.SetCurrentAction(NULL, 0, npcf.idleID);
+               npcf.frame = 0;
+               break;
+            case ACTOR:
+               npcffDir[0] = pos[0] - npcfpos[0];
+               npcffDir[1] = pos[1] - npcfpos[1];
+               npcf.SetDirection(npcffDir, npcfuDir);
+               npcf.MoveForward(5.0f);
+               if (myDist(pos, npcfpos) < 90.0f)
+               {
+                  npcf.state = IDLE;
+                  npcf.SetCurrentAction(NULL, 0, npcf.idleID);
+                  npcf.frame = 0;
+               }
+               break;
+            case NPCA:
+               npcffDir[0] = npcapos[0] - npcfpos[0];
+               npcffDir[1] = npcapos[1] - npcfpos[1];
+               npcf.SetDirection(npcffDir, npcfuDir);
+               npcf.MoveForward(5.0f);
+               if (myDist(npcapos, npcfpos) < 90.0f)
+               {
+                  npcf.state = IDLE;
+                  npcf.SetCurrentAction(NULL, 0, npcf.idleID);
+                  npcf.frame = 0;
+               }
+               break;
+            case NPCB:
+               npcffDir[0] = npcbpos[0] - npcfpos[0];
+               npcffDir[1] = npcbpos[1] - npcfpos[1];
+               npcf.SetDirection(npcffDir, npcfuDir);
+               npcf.MoveForward(5.0f);
+               if (myDist(npcbpos, npcfpos) < 90.0f)
+               {
+                  npcf.state = IDLE;
+                  npcf.SetCurrentAction(NULL, 0, npcf.idleID);
+                  npcf.frame = 0;
+               }
+               break;
+            case NPCC:
+               npcffDir[0] = npccpos[0] - npcfpos[0];
+               npcffDir[1] = npccpos[1] - npcfpos[1];
+               npcf.SetDirection(npcffDir, npcfuDir);
+               npcf.MoveForward(5.0f);
+               if (myDist(npccpos, npcfpos) < 90.0f)
+               {
+                  npcf.state = IDLE;
+                  npcf.SetCurrentAction(NULL, 0, npcf.idleID);
+                  npcf.frame = 0;
+               }
+               break;
+            case NPCD:
+               npcffDir[0] = npcdpos[0] - npcfpos[0];
+               npcffDir[1] = npcdpos[1] - npcfpos[1];
+               npcf.SetDirection(npcffDir, npcfuDir);
+               npcf.MoveForward(5.0f);
+               if (myDist(npcdpos, npcfpos) < 90.0f)
+               {
+                  npcf.state = IDLE;
+                  npcf.SetCurrentAction(NULL, 0, npcf.idleID);
+                  npcf.frame = 0;
+               }
+               break;
+            case NPCE:
+               npcffDir[0] = npcepos[0] - npcfpos[0];
+               npcffDir[1] = npcepos[1] - npcfpos[1];
+               npcf.SetDirection(npcffDir, npcfuDir);
+               npcf.MoveForward(5.0f);
+               if (myDist(npcepos, npcfpos) < 90.0f)
+               {
+                  npcf.state = IDLE;
+                  npcf.SetCurrentAction(NULL, 0, npcf.idleID);
+                  npcf.frame = 0;
+               }
+               break;
+            case NPCF:
+               npcffDir[0] = npcfpos[0] - npcfpos[0];
+               npcffDir[1] = npcfpos[1] - npcfpos[1];
+               npcf.SetDirection(npcffDir, npcfuDir);
+               npcf.MoveForward(5.0f);
+               if (myDist(npcfpos, npcfpos) < 90.0f)
+               {
+                  npcf.state = IDLE;
+                  npcf.SetCurrentAction(NULL, 0, npcf.idleID);
+                  npcf.frame = 0;
+               }
+               break;
+            case NPCG:
+               npcffDir[0] = npcgpos[0] - npcfpos[0];
+               npcffDir[1] = npcgpos[1] - npcfpos[1];
+               npcf.SetDirection(npcffDir, npcfuDir);
+               npcf.MoveForward(5.0f);
+               if (myDist(npcgpos, npcfpos) < 90.0f)
+               {
+                  npcf.state = IDLE;
+                  npcf.SetCurrentAction(NULL, 0, npcf.idleID);
+                  npcf.frame = 0;
+               }
+               break;
+            default:
+               break;
+         }
 			break;
 		case ATTACK1:
 		// normal attack 1 35 frames
@@ -3640,84 +6863,164 @@ void GameAI(int skip)
 
 			if (npcf.frame == 17)
 			{
-				if (npcf.isFriend && (friendID[0] == NPCF || friendID[1] == NPCF))
-				{
-					if (npca.state != DIE)
-					{
-						if(isHit(npcfpos, npcapos, npcffDir, 120.0f, 40.0f))
-						{
-							npca.blood -= 30;
-							npca.state = DAMAGE;
-							npca.SetCurrentAction(NULL, 0, npca.damageID);
-							npca.frame = 0;
-						}
-					}
-					if (npcb.state != DIE)
-					{
-						if(isHit(npcfpos, npcbpos, npcffDir, 120.0f, 40.0f))
-						{
-							npcb.blood -= 30;
-							npcb.state = DAMAGE;
-							npcb.SetCurrentAction(NULL, 0, npcb.damageID);
-							npcb.frame = 0;
-						}
-					}
-					if (npcc.state != DIE)
-					{
-						if(isHit(npcfpos, npccpos, npcffDir, 120.0f, 40.0f))
-						{
-							npcc.blood -= 30;
-							npcc.state = DAMAGE;
-							npcc.SetCurrentAction(NULL, 0, npcc.damageID);
-							npcc.frame = 0;
-						}
-					}
-					if (npcd.state != DIE)
-					{
-						if(isHit(npcfpos, npcdpos, npcffDir, 120.0f, 40.0f))
-						{
-							npcd.blood -= 30;
-							npcd.state = DAMAGE;
-							npcd.SetCurrentAction(NULL, 0, npcd.damageID);
-							npcd.frame = 0;
-						}
-					}
-					if (npce.state != DIE)
-					{
-						if(isHit(npcfpos, npcepos, npcffDir, 120.0f, 40.0f))
-						{
-							npce.blood -= 30;
-							npce.state = DAMAGE;
-							npce.SetCurrentAction(NULL, 0, npce.damageID);
-							npce.frame = 0;
-						}
-					}
-					if (npcg.state != DIE)
-					{
-						if(isHit(npcfpos, npcgpos, npcffDir, 120.0f, 40.0f))
-						{
-							npcg.blood -= 30;
-							npcg.state = DAMAGE;
-							npcg.SetCurrentAction(NULL, 0, npcg.damageID);
-							npcg.frame = 0;
-						}
-					}
-				}
-				else
-				{
-					if (actor.state != DIE)
-					{
-						if(isHit(npcfpos, pos, npcffDir, 120.0f, 40.0f))
-						{
-							actor.blood -= 30;
-							actor.state = DAMAGE;
-							actor.SetCurrentAction(NULL, 0, heavyDamagedID);
-							actor.frame = 0;
-							attackKeyLocked = true;
-							movementKeyLocked = true;
-						}		
-					}	
-				}
+				if (npcf.isFriend)
+            {
+               if (npca.state != DIE && !npca.isFriend)
+               {
+                  if(isHit(npcfpos, npcapos, npcffDir, 120.0f, 40.0f))
+                  {
+                     npca.blood -= 30;
+                     npca.state = DAMAGE;
+                     npca.SetCurrentAction(NULL, 0, npca.damageID);
+                     npca.frame = 0;
+                  }
+               }
+               if (npcb.state != DIE && !npcb.isFriend)
+               {
+                  if(isHit(npcfpos, npcbpos, npcffDir, 120.0f, 40.0f))
+                  {
+                     npcb.blood -= 30;
+                     npcb.state = DAMAGE;
+                     npcb.SetCurrentAction(NULL, 0, npcb.damageID);
+                     npcb.frame = 0;
+                  }
+               }
+               if (npcc.state != DIE && !npcc.isFriend)
+               {
+                  if(isHit(npcfpos, npccpos, npcffDir, 120.0f, 40.0f))
+                  {
+                     npcc.blood -= 30;
+                     npcc.state = DAMAGE;
+                     npcc.SetCurrentAction(NULL, 0, npcc.damageID);
+                     npcc.frame = 0;
+                  }
+               }
+               if (npcd.state != DIE && !npcd.isFriend)
+               {
+                  if(isHit(npcfpos, npcdpos, npcffDir, 120.0f, 40.0f))
+                  {
+                     npcd.blood -= 30;
+                     npcd.state = DAMAGE;
+                     npcd.SetCurrentAction(NULL, 0, npcd.damageID);
+                     npcd.frame = 0;
+                  }
+               }
+               if (npce.state != DIE && !npce.isFriend)
+               {
+                  if(isHit(npcfpos, npcepos, npcffDir, 120.0f, 40.0f))
+                  {
+                     npce.blood -= 30;
+                     npce.state = DAMAGE;
+                     npce.SetCurrentAction(NULL, 0, npce.damageID);
+                     npce.frame = 0;
+                  }
+               }
+               if (npcf.state != DIE && !npcf.isFriend)
+               {
+                  if(isHit(npcfpos, npcfpos, npcffDir, 120.0f, 40.0f))
+                  {
+                     npcf.blood -= 30;
+                     npcf.state = DAMAGE;
+                     npcf.SetCurrentAction(NULL, 0, npcf.damageID);
+                     npcf.frame = 0;
+                  }
+               }
+               if (npcg.state != DIE && !npcg.isFriend)
+               {
+                  if(isHit(npcfpos, npcgpos, npcffDir, 120.0f, 40.0f))
+                  {
+                     npcg.blood -= 30;
+                     npcg.state = DAMAGE;
+                     npcg.SetCurrentAction(NULL, 0, npcg.damageID);
+                     npcg.frame = 0;
+                  }
+               }
+            }
+            else
+            {
+               if (actor.state != DIE)
+               {
+                  if(isHit(npcfpos, pos, npcffDir, 120.0f, 40.0f))
+                  {
+                     actor.blood -= 30;
+                     actor.state = DAMAGE;
+                     actor.SetCurrentAction(NULL, 0, heavyDamagedID);
+                     actor.frame = 0;
+                     attackKeyLocked = true;
+                     movementKeyLocked = true;
+                  }     
+               }
+               if (npca.state != DIE && npca.isFriend)
+               {
+                  if(isHit(npcfpos, npcapos, npcffDir, 120.0f, 40.0f))
+                  {
+                     npca.blood -= 30;
+                     npca.state = DAMAGE;
+                     npca.SetCurrentAction(NULL, 0, npca.damageID);
+                     npca.frame = 0;
+                  }
+               }
+               if (npcb.state != DIE && npcb.isFriend)
+               {
+                  if(isHit(npcfpos, npcbpos, npcffDir, 120.0f, 40.0f))
+                  {
+                     npcb.blood -= 30;
+                     npcb.state = DAMAGE;
+                     npcb.SetCurrentAction(NULL, 0, npcb.damageID);
+                     npcb.frame = 0;
+                  }
+               }
+               if (npcc.state != DIE && npcc.isFriend)
+               {
+                  if(isHit(npcfpos, npccpos, npcffDir, 120.0f, 40.0f))
+                  {
+                     npcc.blood -= 30;
+                     npcc.state = DAMAGE;
+                     npcc.SetCurrentAction(NULL, 0, npcc.damageID);
+                     npcc.frame = 0;
+                  }
+               }
+               if (npcd.state != DIE && npcd.isFriend)
+               {
+                  if(isHit(npcfpos, npcdpos, npcffDir, 120.0f, 40.0f))
+                  {
+                     npcd.blood -= 30;
+                     npcd.state = DAMAGE;
+                     npcd.SetCurrentAction(NULL, 0, npcd.damageID);
+                     npcd.frame = 0;
+                  }
+               }
+               if (npce.state != DIE && npce.isFriend)
+               {
+                  if(isHit(npcfpos, npcepos, npcffDir, 120.0f, 40.0f))
+                  {
+                     npce.blood -= 30;
+                     npce.state = DAMAGE;
+                     npce.SetCurrentAction(NULL, 0, npce.damageID);
+                     npce.frame = 0;
+                  }
+               }
+               if (npcf.state != DIE && npcf.isFriend)
+               {
+                  if(isHit(npcfpos, npcfpos, npcffDir, 120.0f, 40.0f))
+                  {
+                     npcf.blood -= 30;
+                     npcf.state = DAMAGE;
+                     npcf.SetCurrentAction(NULL, 0, npcf.damageID);
+                     npcf.frame = 0;
+                  }
+               }
+               if (npcg.state != DIE && npcg.isFriend)
+               {
+                  if(isHit(npcfpos, npcgpos, npcffDir, 120.0f, 40.0f))
+                  {
+                     npcg.blood -= 30;
+                     npcg.state = DAMAGE;
+                     npcg.SetCurrentAction(NULL, 0, npcg.damageID);
+                     npcg.frame = 0;
+                  }
+               }
+            }
 			}
 			if (npcf.frame == 34)
 			{
@@ -3728,6 +7031,176 @@ void GameAI(int skip)
 			break;
 		case ATTACK2:
 		// normal attack 2 39 frames
+         npcf.Play(ONCE, (float) skip, FALSE, TRUE);
+         npcf.frame++;
+
+         if (npcf.frame == 17)
+         {
+            if (npcf.isFriend)
+            {
+               if (npca.state != DIE && !npca.isFriend)
+               {
+                  if(isHit(npcfpos, npcapos, npcffDir, 120.0f, 40.0f))
+                  {
+                     npca.blood -= 30;
+                     npca.state = DAMAGE;
+                     npca.SetCurrentAction(NULL, 0, npca.damageID);
+                     npca.frame = 0;
+                  }
+               }
+               if (npcb.state != DIE && !npcb.isFriend)
+               {
+                  if(isHit(npcfpos, npcbpos, npcffDir, 120.0f, 40.0f))
+                  {
+                     npcb.blood -= 30;
+                     npcb.state = DAMAGE;
+                     npcb.SetCurrentAction(NULL, 0, npcb.damageID);
+                     npcb.frame = 0;
+                  }
+               }
+               if (npcc.state != DIE && !npcc.isFriend)
+               {
+                  if(isHit(npcfpos, npccpos, npcffDir, 120.0f, 40.0f))
+                  {
+                     npcc.blood -= 30;
+                     npcc.state = DAMAGE;
+                     npcc.SetCurrentAction(NULL, 0, npcc.damageID);
+                     npcc.frame = 0;
+                  }
+               }
+               if (npcd.state != DIE && !npcd.isFriend)
+               {
+                  if(isHit(npcfpos, npcdpos, npcffDir, 120.0f, 40.0f))
+                  {
+                     npcd.blood -= 30;
+                     npcd.state = DAMAGE;
+                     npcd.SetCurrentAction(NULL, 0, npcd.damageID);
+                     npcd.frame = 0;
+                  }
+               }
+               if (npce.state != DIE && !npce.isFriend)
+               {
+                  if(isHit(npcfpos, npcepos, npcffDir, 120.0f, 40.0f))
+                  {
+                     npce.blood -= 30;
+                     npce.state = DAMAGE;
+                     npce.SetCurrentAction(NULL, 0, npce.damageID);
+                     npce.frame = 0;
+                  }
+               }
+               if (npcf.state != DIE && !npcf.isFriend)
+               {
+                  if(isHit(npcfpos, npcfpos, npcffDir, 120.0f, 40.0f))
+                  {
+                     npcf.blood -= 30;
+                     npcf.state = DAMAGE;
+                     npcf.SetCurrentAction(NULL, 0, npcf.damageID);
+                     npcf.frame = 0;
+                  }
+               }
+               if (npcg.state != DIE && !npcg.isFriend)
+               {
+                  if(isHit(npcfpos, npcgpos, npcffDir, 120.0f, 40.0f))
+                  {
+                     npcg.blood -= 30;
+                     npcg.state = DAMAGE;
+                     npcg.SetCurrentAction(NULL, 0, npcg.damageID);
+                     npcg.frame = 0;
+                  }
+               }
+            }
+            else
+            {
+               if (actor.state != DIE)
+               {
+                  if(isHit(npcfpos, pos, npcffDir, 120.0f, 40.0f))
+                  {
+                     actor.blood -= 30;
+                     actor.state = DAMAGE;
+                     actor.SetCurrentAction(NULL, 0, heavyDamagedID);
+                     actor.frame = 0;
+                     attackKeyLocked = true;
+                     movementKeyLocked = true;
+                  }     
+               }
+               if (npca.state != DIE && npca.isFriend)
+               {
+                  if(isHit(npcfpos, npcapos, npcffDir, 120.0f, 40.0f))
+                  {
+                     npca.blood -= 30;
+                     npca.state = DAMAGE;
+                     npca.SetCurrentAction(NULL, 0, npca.damageID);
+                     npca.frame = 0;
+                  }
+               }
+               if (npcb.state != DIE && npcb.isFriend)
+               {
+                  if(isHit(npcfpos, npcbpos, npcffDir, 120.0f, 40.0f))
+                  {
+                     npcb.blood -= 30;
+                     npcb.state = DAMAGE;
+                     npcb.SetCurrentAction(NULL, 0, npcb.damageID);
+                     npcb.frame = 0;
+                  }
+               }
+               if (npcc.state != DIE && npcc.isFriend)
+               {
+                  if(isHit(npcfpos, npccpos, npcffDir, 120.0f, 40.0f))
+                  {
+                     npcc.blood -= 30;
+                     npcc.state = DAMAGE;
+                     npcc.SetCurrentAction(NULL, 0, npcc.damageID);
+                     npcc.frame = 0;
+                  }
+               }
+               if (npcd.state != DIE && npcd.isFriend)
+               {
+                  if(isHit(npcfpos, npcdpos, npcffDir, 120.0f, 40.0f))
+                  {
+                     npcd.blood -= 30;
+                     npcd.state = DAMAGE;
+                     npcd.SetCurrentAction(NULL, 0, npcd.damageID);
+                     npcd.frame = 0;
+                  }
+               }
+               if (npce.state != DIE && npce.isFriend)
+               {
+                  if(isHit(npcfpos, npcepos, npcffDir, 120.0f, 40.0f))
+                  {
+                     npce.blood -= 30;
+                     npce.state = DAMAGE;
+                     npce.SetCurrentAction(NULL, 0, npce.damageID);
+                     npce.frame = 0;
+                  }
+               }
+               if (npcf.state != DIE && npcf.isFriend)
+               {
+                  if(isHit(npcfpos, npcfpos, npcffDir, 120.0f, 40.0f))
+                  {
+                     npcf.blood -= 30;
+                     npcf.state = DAMAGE;
+                     npcf.SetCurrentAction(NULL, 0, npcf.damageID);
+                     npcf.frame = 0;
+                  }
+               }
+               if (npcg.state != DIE && npcg.isFriend)
+               {
+                  if(isHit(npcfpos, npcgpos, npcffDir, 120.0f, 40.0f))
+                  {
+                     npcg.blood -= 30;
+                     npcg.state = DAMAGE;
+                     npcg.SetCurrentAction(NULL, 0, npcg.damageID);
+                     npcg.frame = 0;
+                  }
+               }
+            }
+         }
+         if (npcf.frame == 38)
+         {
+            npcf.state = IDLE;
+            npcf.SetCurrentAction(NULL, 0, npcf.idleID); 
+            npcf.frame = 0;
+         }
 			break;
 		case DAMAGE:
 		// no damage
@@ -3745,19 +7218,30 @@ void GameAI(int skip)
 			}
 			break;
 		case DIE:
-		// die
+		// die 58
 			npcf.Play(ONCE, (float) skip, FALSE, TRUE);
 			if (!npcf.isFriend)
 			{
 				npcf.frame++;
-				if (npcf.frame == 300)
+				if (npcf.frame == 87)
 				{
-					npcf.state = IDLE;
-					npcf.SetCurrentAction(NULL, 0, npcf.idleID);
-					npcf.frame = 0;
-					npcf.blood = npcf.fullBlood;
+					if (teammateID[0] == NONE)
+					{
+						teammateID[0] = NPCF;
+						npcf.state = IDLE;
+						npcf.SetCurrentAction(NULL, 0, npcf.idleID);
+						npcf.frame = 0;
+						npcf.blood = npcf.fullBlood;
+					}
+					else if (teammateID[1] == NONE)
+					{	
+						npcf.state = IDLE;
+						npcf.SetCurrentAction(NULL, 0, npcf.idleID);
+						npcf.frame = 0;
+						npcf.blood = npcf.fullBlood;
+						teammateID[1] = NPCF;
+					}
 					npcf.isFriend = true;
-					
 				}
 			}
 			break;
@@ -3768,11 +7252,11 @@ void GameAI(int skip)
 	npcf.BB();
 
 	/*------------------------------------------
-	 ||||    || |||||||||   ||||||||  
-	 || ||   || ||      || ||      || 
-	 ||  ||  || |||||||||  ||         g
-	 ||   || || ||         ||      || 
-	 ||    |||| ||          ||||||||  
+	 ||||    || |||||||||   ||||||||   ||||||||
+	 || ||   || ||      || ||      || ||
+	 ||  ||  || |||||||||  ||         ||    |||
+	 ||   || || ||         ||      || ||      ||
+	 ||    |||| ||          ||||||||   ||||||||
 	 ------------------------------------------*/
 
 	if (npcg.blood <= 0 && npcg.state != DIE)
@@ -3780,6 +7264,147 @@ void GameAI(int skip)
 		npcg.state = DIE;
 		npcg.SetCurrentAction(NULL, 0, npcg.dieID);
 	}
+
+   if (npcg.state != DIE)
+   {
+      if (npcg.isFriend)
+      {
+         if ((teammateID[0] == NPCG && isFollow[0]) || (teammateID[1] == NPCG && isFollow[1]))
+         {
+            npcg.target = ACTOR;
+         }
+         else
+         {
+            switch(npcg.target)
+            {
+               case NONE:
+                  npcg.target = nearestEnemy(NPCG, npcgpos);
+                  if (npcg.target == NONE)
+                  {
+                     npcg.target = ACTOR;
+                  }
+                  break;
+               case ACTOR:
+                  if (actor.state == DIE)
+                  {
+                     npcg.target = NONE;
+                  }
+                  if ((teammateID[0] == NPCG && !isFollow[0]) || (teammateID[1] == NPCG && !isFollow[1]))
+                  {
+                     npcg.target = nearestEnemy(NPCG, npcgpos);
+                     if (npcg.target == NONE)
+                     {
+                        npcg.target = ACTOR;
+                     }
+                  }
+                  break;
+               case NPCA:
+                  if (npca.state == DIE)
+                  {
+                     npcg.target = NONE;
+                  }
+                  break;
+               case NPCB:
+                  if (npcb.state == DIE)
+                  {
+                     npcg.target = NONE;
+                  }
+                  break;
+               case NPCC:
+                  if (npcc.state == DIE)
+                  {
+                     npcg.target = NONE;
+                  }
+                  break;
+               case NPCD:
+                  if (npcd.state == DIE)
+                  {
+                     npcg.target = NONE;
+                  }
+                  break;
+               case NPCE:
+                  if (npce.state == DIE)
+                  {
+                     npcg.target = NONE;
+                  }
+                  break;
+               case NPCF:
+                  if (npcf.state == DIE)
+                  {
+                     npcg.target = NONE;
+                  }
+                  break;
+               case NPCG:
+                  if (npcg.state == DIE)
+                  {
+                     npcg.target = NONE;
+                  }
+                  break;
+               default:
+                  break;
+            }
+         }
+      }
+      else
+      {
+         switch(npcg.target)
+         {
+            case NONE:
+               npcg.target = nearestFriend(NPCG, npcgpos);
+               break;
+            case ACTOR:
+               if (actor.state == DIE)
+               {
+                  npcg.target = NONE;
+               }
+               break;
+            case NPCA:
+               if (npca.state == DIE)
+               {
+                  npcg.target = NONE;
+               }
+               break;
+            case NPCB:
+               if (npcb.state == DIE)
+               {
+                  npcg.target = NONE;
+               }
+               break;
+            case NPCC:
+               if (npcc.state == DIE)
+               {
+                  npcg.target = NONE;
+               }
+               break;
+            case NPCD:
+               if (npcd.state == DIE)
+               {
+                  npcg.target = NONE;
+               }
+               break;
+            case NPCE:
+               if (npce.state == DIE)
+               {
+                  npcg.target = NONE;
+               }
+               break;
+            case NPCF:
+               if (npcf.state == DIE)
+               {
+                  npcg.target = NONE;
+               }
+               break;
+            case NPCG:
+               if (npcg.state == DIE)
+               {
+                  npcg.target = NONE;
+               }
+               break;
+            default:
+               break;
+         }
+      }
+   }
 
 	/*
 		npcg.state:
@@ -3795,530 +7420,383 @@ void GameAI(int skip)
 		case IDLE:
 		// combat idle
 			npcg.Play(LOOP, (float) skip, FALSE, TRUE);
-			if (npcg.isFriend)
-			{
-				if ((isFollow[0] && friendID[0] == NPCG) || (isFollow[1] && friendID[1] == NPCG))
-				{
-					if (myDist(pos, npcgpos) >= 100.0f)
-					{
-						npcg.state = RUN;
-						npcg.SetCurrentAction(NULL, 0, npcg.runID);
-						npcg.frame = 0;
-						npcg.target = ACTOR;
-					}
-				}
-				else if ((!isFollow[0] && friendID[0] == NPCG) || (!isFollow[1] && friendID[1] == NPCG))
-				{
-					if (myDist(npcgpos, npcapos) <= 1000.0f && myDist(npcgpos, npcapos) >= 100.0f && npca.state != DIE && !npca.isFriend)
-					{
-						npcg.state = RUN;
-						npcg.SetCurrentAction(NULL, 0, npcg.runID);
-						npcg.frame = 0;
-						npcg.target = NPCA;
-					}
-					else if (myDist(npcgpos, npcapos) < 100.0f  && npca.state != DIE && !npca.isFriend)
-					{
-						npcg.wait++;
-						npcgfDir[0] = npcapos[0] - npcgpos[0];
-						npcgfDir[1] = npcapos[1] - npcgpos[1];
-						npcg.SetDirection(npcgfDir, npcguDir);
-						if (npcg.wait == 50)
-						{
-							npcg.state = ATTACK1;
-							npcg.SetCurrentAction(NULL, 0, npcg.attack1ID);
-							npcg.frame = 0;
-							npcg.target = NPCA;
-							npcg.wait = 0;
-						}
-					}
-					else if (myDist(npcgpos, npcbpos) <= 1000.0f && myDist(npcgpos, npcbpos) >= 100.0f && npcb.state != DIE && !npcb.isFriend)
-					{
-						npcg.state = RUN;
-						npcg.SetCurrentAction(NULL, 0, npcg.runID);
-						npcg.frame = 0;
-						npcg.target = NPCB;
-					}
-					else if (myDist(npcgpos, npcbpos) < 100.0f  && npcb.state != DIE && !npcb.isFriend)
-					{
-						npcg.wait++;
-						npcgfDir[0] = npcbpos[0] - npcgpos[0];
-						npcgfDir[1] = npcbpos[1] - npcgpos[1];
-						npcg.SetDirection(npcgfDir, npcguDir);
-						if (npcg.wait == 50)
-						{
-							npcg.state = ATTACK1;
-							npcg.SetCurrentAction(NULL, 0, npcg.attack1ID);
-							npcg.frame = 0;
-							npcg.target = NPCB;
-							npcg.wait = 0;
-						}
-					}
-					else if (myDist(npcgpos, npccpos) <= 1000.0f && myDist(npcgpos, npccpos) >= 100.0f && npcc.state != DIE && !npcc.isFriend)
-					{
-						npcg.state = RUN;
-						npcg.SetCurrentAction(NULL, 0, npcg.runID);
-						npcg.frame = 0;
-						npcg.target = NPCC;
-					}
-					else if (myDist(npcgpos, npccpos) < 100.0f  && npcc.state != DIE && !npcc.isFriend)
-					{
-						npcg.wait++;
-						npcgfDir[0] = npccpos[0] - npcgpos[0];
-						npcgfDir[1] = npccpos[1] - npcgpos[1];
-						npcg.SetDirection(npcgfDir, npcguDir);
-						if (npcg.wait == 50)
-						{
-							npcg.state = ATTACK1;
-							npcg.SetCurrentAction(NULL, 0, npcg.attack1ID);
-							npcg.frame = 0;
-							npcg.target = NPCC;
-							npcg.wait = 0;
-						}
-					}
-					else if (myDist(npcgpos, npcdpos) <= 1000.0f && myDist(npcgpos, npcdpos) >= 100.0f && npcd.state != DIE && !npcd.isFriend)
-					{
-						npcg.state = RUN;
-						npcg.SetCurrentAction(NULL, 0, npcg.runID);
-						npcg.frame = 0;
-						npcg.target = NPCF;
-					}
-					else if (myDist(npcgpos, npcdpos) < 100.0f  && npcd.state != DIE && !npcd.isFriend)
-					{
-						npcg.wait++;
-						npcgfDir[0] = npcdpos[0] - npcgpos[0];
-						npcgfDir[1] = npcdpos[1] - npcgpos[1];
-						npcg.SetDirection(npcgfDir, npcguDir);
-						if (npcg.wait == 50)
-						{
-							npcg.state = ATTACK1;
-							npcg.SetCurrentAction(NULL, 0, npcg.attack1ID);
-							npcg.frame = 0;
-							npcg.target = NPCF;
-							npcg.wait = 0;
-						}
-					}
-					else if (myDist(npcgpos, npcepos) <= 1000.0f && myDist(npcgpos, npcepos) >= 100.0f && npce.state != DIE && !npce.isFriend)
-					{
-						npcg.state = RUN;
-						npcg.SetCurrentAction(NULL, 0, npcg.runID);
-						npcg.frame = 0;
-						npcg.target = NPCE;
-					}
-					else if (myDist(npcgpos, npcepos) < 100.0f  && npce.state != DIE && !npce.isFriend)
-					{
-						npcg.wait++;
-						npcgfDir[0] = npcepos[0] - npcgpos[0];
-						npcgfDir[1] = npcepos[1] - npcgpos[1];
-						npcg.SetDirection(npcgfDir, npcguDir);
-						if (npcg.wait == 50)
-						{
-							npcg.state = ATTACK1;
-							npcg.SetCurrentAction(NULL, 0, npcg.attack1ID);
-							npcg.frame = 0;
-							npcg.target = NPCE;
-							npcg.wait = 0;
-						}
-					}
-					else if (myDist(npcgpos, npcfpos) <= 1000.0f && myDist(npcgpos, npcfpos) >= 100.0f && npcf.state != DIE && !npcf.isFriend)
-					{
-						npcg.state = RUN;
-						npcg.SetCurrentAction(NULL, 0, npcg.runID);
-						npcg.frame = 0;
-						npcg.target = NPCF;
-					}
-					else if (myDist(npcgpos, npcfpos) < 100.0f  && npcf.state != DIE && !npcf.isFriend)
-					{
-						npcg.wait++;
-						npcgfDir[0] = npcfpos[0] - npcgpos[0];
-						npcgfDir[1] = npcfpos[1] - npcgpos[1];
-						npcg.SetDirection(npcgfDir, npcguDir);
-						if (npcg.wait == 50)
-						{
-							npcg.state = ATTACK1;
-							npcg.SetCurrentAction(NULL, 0, npcg.attack1ID);
-							npcg.frame = 0;
-							npcg.target = NPCF;
-							npcg.wait = 0;
-						}
-					}
-					else if (myDist(npcgpos, npcgpos) <= 1000.0f && myDist(npcgpos, npcgpos) >= 100.0f && npcg.state != DIE && !npcg.isFriend)
-					{
-						npcg.state = RUN;
-						npcg.SetCurrentAction(NULL, 0, npcg.runID);
-						npcg.frame = 0;
-						npcg.target = NPCG;
-					}
-					else if (myDist(npcgpos, npcgpos) < 100.0f  && npcg.state != DIE && !npcg.isFriend)
-					{
-						npcg.wait++;
-						npcgfDir[0] = npcgpos[0] - npcgpos[0];
-						npcgfDir[1] = npcgpos[1] - npcgpos[1];
-						npcg.SetDirection(npcgfDir, npcguDir);
-						if (npcg.wait == 50)
-						{
-							npcg.state = ATTACK1;
-							npcg.SetCurrentAction(NULL, 0, npcg.attack1ID);
-							npcg.frame = 0;
-							npcg.target = NPCG;
-							npcg.wait = 0;
-						}
-					}
-					else if (myDist(pos, npcgpos) >= 100.0f)
-					{
-						npcg.state = RUN;
-						npcg.SetCurrentAction(NULL, 0, npcg.runID);
-						npcg.frame = 0;
-						npcg.target = ACTOR;
-					}
-				}
-			}
-			else
-			{
-				if (myDist(npcgpos, npcapos) <= 1000.0f && myDist(npcgpos, npcapos) >= 100.0f && npca.state != DIE && npca.isFriend)
-					{
-						npcg.state = RUN;
-						npcg.SetCurrentAction(NULL, 0, npcg.runID);
-						npcg.frame = 0;
-						npcg.target = NPCA;
-					}
-					else if (myDist(npcgpos, npcapos) < 100.0f  && npca.state != DIE && npca.isFriend)
-					{
-						npcg.wait++;
-						npcgfDir[0] = npcapos[0] - npcgpos[0];
-						npcgfDir[1] = npcapos[1] - npcgpos[1];
-						npcg.SetDirection(npcgfDir, npcguDir);
-						if (npcg.wait == 50)
-						{
-							npcg.state = ATTACK1;
-							npcg.SetCurrentAction(NULL, 0, npcg.attack1ID);
-							npcg.frame = 0;
-							npcg.target = NPCA;
-							npcg.wait = 0;
-						}
-					}
-					else if (myDist(npcgpos, npcbpos) <= 1000.0f && myDist(npcgpos, npcbpos) >= 100.0f && npcb.state != DIE && npcb.isFriend)
-					{
-						npcg.state = RUN;
-						npcg.SetCurrentAction(NULL, 0, npcg.runID);
-						npcg.frame = 0;
-						npcg.target = NPCB;
-					}
-					else if (myDist(npcgpos, npcbpos) < 100.0f  && npcb.state != DIE && npcb.isFriend)
-					{
-						npcg.wait++;
-						npcgfDir[0] = npcbpos[0] - npcgpos[0];
-						npcgfDir[1] = npcbpos[1] - npcgpos[1];
-						npcg.SetDirection(npcgfDir, npcguDir);
-						if (npcg.wait == 50)
-						{
-							npcg.state = ATTACK1;
-							npcg.SetCurrentAction(NULL, 0, npcg.attack1ID);
-							npcg.frame = 0;
-							npcg.target = NPCB;
-							npcg.wait = 0;
-						}
-					}
-					else if (myDist(npcgpos, npccpos) <= 1000.0f && myDist(npcgpos, npccpos) >= 100.0f && npcc.state != DIE && npcc.isFriend)
-					{
-						npcg.state = RUN;
-						npcg.SetCurrentAction(NULL, 0, npcg.runID);
-						npcg.frame = 0;
-						npcg.target = NPCC;
-					}
-					else if (myDist(npcgpos, npccpos) < 100.0f  && npcc.state != DIE && npcc.isFriend)
-					{
-						npcg.wait++;
-						npcgfDir[0] = npccpos[0] - npcgpos[0];
-						npcgfDir[1] = npccpos[1] - npcgpos[1];
-						npcg.SetDirection(npcgfDir, npcguDir);
-						if (npcg.wait == 50)
-						{
-							npcg.state = ATTACK1;
-							npcg.SetCurrentAction(NULL, 0, npcg.attack1ID);
-							npcg.frame = 0;
-							npcg.target = NPCC;
-							npcg.wait = 0;
-						}
-					}
-					else if (myDist(npcgpos, npcdpos) <= 1000.0f && myDist(npcgpos, npcdpos) >= 100.0f && npcd.state != DIE && npcd.isFriend)
-					{
-						npcg.state = RUN;
-						npcg.SetCurrentAction(NULL, 0, npcg.runID);
-						npcg.frame = 0;
-						npcg.target = NPCF;
-					}
-					else if (myDist(npcgpos, npcdpos) < 100.0f  && npcd.state != DIE && npcd.isFriend)
-					{
-						npcg.wait++;
-						npcgfDir[0] = npcdpos[0] - npcgpos[0];
-						npcgfDir[1] = npcdpos[1] - npcgpos[1];
-						npcg.SetDirection(npcgfDir, npcguDir);
-						if (npcg.wait == 50)
-						{
-							npcg.state = ATTACK1;
-							npcg.SetCurrentAction(NULL, 0, npcg.attack1ID);
-							npcg.frame = 0;
-							npcg.target = NPCF;
-							npcg.wait = 0;
-						}
-					}
-					else if (myDist(npcgpos, npcepos) <= 1000.0f && myDist(npcgpos, npcepos) >= 100.0f && npce.state != DIE && npce.isFriend)
-					{
-						npcg.state = RUN;
-						npcg.SetCurrentAction(NULL, 0, npcg.runID);
-						npcg.frame = 0;
-						npcg.target = NPCE;
-					}
-					else if (myDist(npcgpos, npcepos) < 100.0f  && npce.state != DIE && npce.isFriend)
-					{
-						npcg.wait++;
-						npcgfDir[0] = npcepos[0] - npcgpos[0];
-						npcgfDir[1] = npcepos[1] - npcgpos[1];
-						npcg.SetDirection(npcgfDir, npcguDir);
-						if (npcg.wait == 50)
-						{
-							npcg.state = ATTACK1;
-							npcg.SetCurrentAction(NULL, 0, npcg.attack1ID);
-							npcg.frame = 0;
-							npcg.target = NPCE;
-							npcg.wait = 0;
-						}
-					}
-					else if (myDist(npcgpos, npcfpos) <= 1000.0f && myDist(npcgpos, npcfpos) >= 100.0f && npcf.state != DIE && npcf.isFriend)
-					{
-						npcg.state = RUN;
-						npcg.SetCurrentAction(NULL, 0, npcg.runID);
-						npcg.frame = 0;
-						npcg.target = NPCF;
-					}
-					else if (myDist(npcgpos, npcfpos) < 100.0f  && npcf.state != DIE && npcf.isFriend)
-					{
-						npcg.wait++;
-						npcgfDir[0] = npcfpos[0] - npcgpos[0];
-						npcgfDir[1] = npcfpos[1] - npcgpos[1];
-						npcg.SetDirection(npcgfDir, npcguDir);
-						if (npcg.wait == 50)
-						{
-							npcg.state = ATTACK1;
-							npcg.SetCurrentAction(NULL, 0, npcg.attack1ID);
-							npcg.frame = 0;
-							npcg.target = NPCF;
-							npcg.wait = 0;
-						}
-					}
-					else if (myDist(npcgpos, npcgpos) <= 1000.0f && myDist(npcgpos, npcgpos) >= 100.0f && npcg.state != DIE && npcg.isFriend)
-					{
-						npcg.state = RUN;
-						npcg.SetCurrentAction(NULL, 0, npcg.runID);
-						npcg.frame = 0;
-						npcg.target = NPCG;
-					}
-					else if (myDist(npcgpos, npcgpos) < 100.0f  && npcg.state != DIE && npcg.isFriend)
-					{
-						npcg.wait++;
-						npcgfDir[0] = npcgpos[0] - npcgpos[0];
-						npcgfDir[1] = npcgpos[1] - npcgpos[1];
-						npcg.SetDirection(npcgfDir, npcguDir);
-						if (npcg.wait == 50)
-						{
-							npcg.state = ATTACK1;
-							npcg.SetCurrentAction(NULL, 0, npcg.attack1ID);
-							npcg.frame = 0;
-							npcg.target = NPCG;
-							npcg.wait = 0;
-						}
-					}
-					else if (myDist(pos, npcgpos) <= 1000.0f && myDist(pos, npcgpos) >= 100.0f)
-				{
-					npcg.state = RUN;
-					npcg.SetCurrentAction(NULL, 0, npcg.runID);
-					npcg.frame = 0;
-					npcg.target = ACTOR;
-				}
-				else if (myDist(pos, npcgpos) < 100.0f  && actor.state != DIE)
-				{
-					npcg.wait++;
-					npcgfDir[0] = pos[0] - npcgpos[0];
-					npcgfDir[1] = pos[1] - npcgpos[1];
-					npcg.SetDirection(npcgfDir, npcguDir);
-					if (npcg.wait == 50)
-					{
-						npcg.state = ATTACK1;
-						npcg.SetCurrentAction(NULL, 0, npcg.attack1ID);
-						npcg.frame = 0;
-						npcg.target = ACTOR;
-						npcg.wait = 0;
-					}
-				}
-			}
+			switch (npcg.target)
+         {
+            case NONE:
+               break;
+            case ACTOR:
+               if (npcg.isFriend)
+               {
+                  if (myDist(pos, npcgpos) >= 100.0f)
+                  {
+                     npcg.state = RUN;
+                     npcg.SetCurrentAction(NULL, 0, npcg.runID);
+                     npcg.frame = 0;
+                  }
+               }
+               else
+               {
+                  if (myDist(pos, npcgpos) <= 500.0f && myDist(pos, npcgpos) >= 100.0f)
+                  {  
+                     npcg.state = RUN;
+                     npcg.SetCurrentAction(NULL, 0, npcg.runID);
+                     npcg.frame = 0;
+                  }
+                  else if (myDist(pos, npcgpos) < 100.0f  && actor.state != DIE)
+                  {
+                     npcg.wait1++;
+                     npcgfDir[0] = pos[0] - npcgpos[0];
+                     npcgfDir[1] = pos[1] - npcgpos[1];
+                     npcg.SetDirection(npcgfDir, npcguDir);
+                     if (npcg.wait1 % 50 == 0)
+                     {
+                        npcg.wait2++;
+                        if (npcg.wait2 % 2 == 0)
+                        {
+                           npcg.state = ATTACK2;
+                           npcg.SetCurrentAction(NULL, 0, npcg.attack2ID);
+                           npcg.frame = 0;
+                        }
+                        else
+                        {
+                           npcg.state = ATTACK1;
+                           npcg.SetCurrentAction(NULL, 0, npcg.attack1ID);
+                           npcg.frame = 0;
+                        }
+                     }
+                  }
+               }
+               break;
+            case NPCA:
+               if (myDist(npcgpos, npcapos) <= 600.0f && myDist(npcgpos, npcapos) >= 100.0f)
+               {
+                  npcg.state = RUN;
+                  npcg.SetCurrentAction(NULL, 0, npcg.runID);
+                  npcg.frame = 0;
+               }
+               else if (myDist(npcgpos, npcapos) < 100.0f)
+               {
+                  npcg.wait1++;
+                  npcgfDir[0] = npcapos[0] - npcgpos[0];
+                  npcgfDir[1] = npcapos[1] - npcgpos[1];
+                  npcg.SetDirection(npcgfDir, npcguDir);
+                  if (npcg.wait1 % 50 == 0)
+                  {
+                     npcg.wait1++;
+                     if (npcg.wait2 % 2 == 0)
+                     {
+                        npcg.state = ATTACK2;
+                        npcg.SetCurrentAction(NULL, 0, npcg.attack2ID);
+                        npcg.frame = 0;
+                     }
+                     else
+                     {
+                        npcg.state = ATTACK1;
+                        npcg.SetCurrentAction(NULL, 0, npcg.attack1ID);
+                        npcg.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCB:
+               if (myDist(npcgpos, npcbpos) <= 600.0f && myDist(npcgpos, npcbpos) >= 100.0f)
+               {
+                  npcg.state = RUN;
+                  npcg.SetCurrentAction(NULL, 0, npcg.runID);
+                  npcg.frame = 0;
+               }
+               else if (myDist(npcgpos, npcbpos) < 100.0f)
+               {
+                  npcg.wait1++;
+                  npcgfDir[0] = npcbpos[0] - npcgpos[0];
+                  npcgfDir[1] = npcbpos[1] - npcgpos[1];
+                  npcg.SetDirection(npcgfDir, npcguDir);
+                  if (npcg.wait1 % 50 == 0)
+                  {
+                     npcg.wait1++;
+                     if (npcg.wait2 % 2 == 0)
+                     {
+                        npcg.state = ATTACK2;
+                        npcg.SetCurrentAction(NULL, 0, npcg.attack2ID);
+                        npcg.frame = 0;
+                     }
+                     else
+                     {
+                        npcg.state = ATTACK1;
+                        npcg.SetCurrentAction(NULL, 0, npcg.attack1ID);
+                        npcg.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCC:
+               if (myDist(npcgpos, npccpos) <= 600.0f && myDist(npcgpos, npccpos) >= 100.0f)
+               {
+                  npcg.state = RUN;
+                  npcg.SetCurrentAction(NULL, 0, npcg.runID);
+                  npcg.frame = 0;
+               }
+               else if (myDist(npcgpos, npccpos) < 100.0f)
+               {
+                  npcg.wait1++;
+                  npcgfDir[0] = npccpos[0] - npcgpos[0];
+                  npcgfDir[1] = npccpos[1] - npcgpos[1];
+                  npcg.SetDirection(npcgfDir, npcguDir);
+                  if (npcg.wait1 % 50 == 0)
+                  {
+                     npcg.wait1++;
+                     if (npcg.wait2 % 2 == 0)
+                     {
+                        npcg.state = ATTACK2;
+                        npcg.SetCurrentAction(NULL, 0, npcg.attack2ID);
+                        npcg.frame = 0;
+                     }
+                     else
+                     {
+                        npcg.state = ATTACK1;
+                        npcg.SetCurrentAction(NULL, 0, npcg.attack1ID);
+                        npcg.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCD:
+               if (myDist(npcgpos, npcdpos) <= 600.0f && myDist(npcgpos, npcdpos) >= 100.0f)
+               {
+                  npcg.state = RUN;
+                  npcg.SetCurrentAction(NULL, 0, npcg.runID);
+                  npcg.frame = 0;
+               }
+               else if (myDist(npcgpos, npcdpos) < 100.0f)
+               {
+                  npcg.wait1++;
+                  npcgfDir[0] = npcdpos[0] - npcgpos[0];
+                  npcgfDir[1] = npcdpos[1] - npcgpos[1];
+                  npcg.SetDirection(npcgfDir, npcguDir);
+                  if (npcg.wait1 % 50 == 0)
+                  {
+                     npcg.wait1++;
+                     if (npcg.wait2 % 2 == 0)
+                     {
+                        npcg.state = ATTACK2;
+                        npcg.SetCurrentAction(NULL, 0, npcg.attack2ID);
+                        npcg.frame = 0;
+                     }
+                     else
+                     {
+                        npcg.state = ATTACK1;
+                        npcg.SetCurrentAction(NULL, 0, npcg.attack1ID);
+                        npcg.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCE:
+               if (myDist(npcgpos, npcepos) <= 600.0f && myDist(npcgpos, npcepos) >= 100.0f)
+               {
+                  npcg.state = RUN;
+                  npcg.SetCurrentAction(NULL, 0, npcg.runID);
+                  npcg.frame = 0;
+               }
+               else if (myDist(npcgpos, npcepos) < 100.0f)
+               {
+                  npcg.wait1++;
+                  npcgfDir[0] = npcepos[0] - npcgpos[0];
+                  npcgfDir[1] = npcepos[1] - npcgpos[1];
+                  npcg.SetDirection(npcgfDir, npcguDir);
+                  if (npcg.wait1 % 50 == 0)
+                  {
+                     npcg.wait1++;
+                     if (npcg.wait2 % 2 == 0)
+                     {
+                        npcg.state = ATTACK2;
+                        npcg.SetCurrentAction(NULL, 0, npcg.attack2ID);
+                        npcg.frame = 0;
+                     }
+                     else
+                     {
+                        npcg.state = ATTACK1;
+                        npcg.SetCurrentAction(NULL, 0, npcg.attack1ID);
+                        npcg.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCF:
+               if (myDist(npcgpos, npcfpos) <= 600.0f && myDist(npcgpos, npcfpos) >= 100.0f)
+               {
+                  npcg.state = RUN;
+                  npcg.SetCurrentAction(NULL, 0, npcg.runID);
+                  npcg.frame = 0;
+               }
+               else if (myDist(npcgpos, npcfpos) < 100.0f)
+               {
+                  npcg.wait1++;
+                  npcgfDir[0] = npcfpos[0] - npcgpos[0];
+                  npcgfDir[1] = npcfpos[1] - npcgpos[1];
+                  npcg.SetDirection(npcgfDir, npcguDir);
+                  if (npcg.wait1 % 50 == 0)
+                  {
+                     npcg.wait1++;
+                     if (npcg.wait2 % 2 == 0)
+                     {
+                        npcg.state = ATTACK2;
+                        npcg.SetCurrentAction(NULL, 0, npcg.attack2ID);
+                        npcg.frame = 0;
+                     }
+                     else
+                     {
+                        npcg.state = ATTACK1;
+                        npcg.SetCurrentAction(NULL, 0, npcg.attack1ID);
+                        npcg.frame = 0;
+                     }
+                  }
+               }
+               break;
+            case NPCG:
+               if (myDist(npcgpos, npcgpos) <= 600.0f && myDist(npcgpos, npcgpos) >= 100.0f)
+               {
+                  npcg.state = RUN;
+                  npcg.SetCurrentAction(NULL, 0, npcg.runID);
+                  npcg.frame = 0;
+               }
+               else if (myDist(npcgpos, npcgpos) < 100.0f)
+               {
+                  npcg.wait1++;
+                  npcgfDir[0] = npcgpos[0] - npcgpos[0];
+                  npcgfDir[1] = npcgpos[1] - npcgpos[1];
+                  npcg.SetDirection(npcgfDir, npcguDir);
+                  if (npcg.wait1 % 50 == 0)
+                  {
+                     npcg.wait1++;
+                     if (npcg.wait2 % 2 == 0)
+                     {
+                        npcg.state = ATTACK2;
+                        npcg.SetCurrentAction(NULL, 0, npcg.attack2ID);
+                        npcg.frame = 0;
+                     }
+                     else
+                     {
+                        npcg.state = ATTACK1;
+                        npcg.SetCurrentAction(NULL, 0, npcg.attack1ID);
+                        npcg.frame = 0;
+                     }
+                  }
+               }
+               break;
+            default:
+               break;
+         }
 			break;
 		case RUN:
 		// run
 			npcg.Play(LOOP, (float) skip, FALSE, TRUE);
-				if ((friendID[0] == NPCG && isFollow[0]) || (friendID[1] == NPCG && isFollow[1]))
-				{
-					npcg.target = ACTOR;
-				}
-				if(npcg.target == ACTOR)
-				{
-					npcgfDir[0] = pos[0] - npcgpos[0];
-					npcgfDir[1] = pos[1] - npcgpos[1];
-					npcg.SetDirection(npcgfDir, npcguDir);
-					if (npcg.isFriend)
-					{
-						npcg.MoveForward(5.0f);
-					}
-					else
-					{
-						npcg.MoveForward(5.0f, TRUE, FALSE, FALSE, TRUE);
-					}
-					if (myDist(pos, npcgpos) < 90.0f)
-					{
-						npcg.state = IDLE;
-						npcg.SetCurrentAction(NULL, 0, npcg.idleID);
-						npcg.frame = 0;
-					}
-				}
-				else if (npcg.target == NPCA)
-				{
-					npcgfDir[0] = npcapos[0] - npcgpos[0];
-					npcgfDir[1] = npcapos[1] - npcgpos[1];
-					npcg.SetDirection(npcgfDir, npcguDir);
-					if (npcg.isFriend)
-					{
-						npcg.MoveForward(5.0f);
-					}
-					else
-					{
-						npcg.MoveForward(5.0f, TRUE, FALSE, FALSE, TRUE);
-					}
-					if (myDist(npcapos, npcgpos) < 90.0f)
-					{
-						npcg.state = IDLE;
-						npcg.SetCurrentAction(NULL, 0, npcg.idleID);
-						npcg.frame = 0;
-					}
-				}
-				else if (npcg.target == NPCB)
-				{
-					npcgfDir[0] = npcbpos[0] - npcgpos[0];
-					npcgfDir[1] = npcbpos[1] - npcgpos[1];
-					npcg.SetDirection(npcgfDir, npcguDir);
-					if (npcg.isFriend)
-					{
-						npcg.MoveForward(5.0f);
-					}
-					else
-					{
-						npcg.MoveForward(5.0f, TRUE, FALSE, FALSE, TRUE);
-					}
-					if (myDist(npcbpos, npcgpos) < 90.0f)
-					{
-						npcg.state = IDLE;
-						npcg.SetCurrentAction(NULL, 0, npcg.idleID);
-						npcg.frame = 0;
-					}
-				}
-				else if (npcg.target == NPCC)
-				{
-					npcgfDir[0] = npccpos[0] - npcgpos[0];
-					npcgfDir[1] = npccpos[1] - npcgpos[1];
-					npcg.SetDirection(npcgfDir, npcguDir);
-					if (npcg.isFriend)
-					{
-						npcg.MoveForward(5.0f);
-					}
-					else
-					{
-						npcg.MoveForward(5.0f, TRUE, FALSE, FALSE, TRUE);
-					}
-					if (myDist(npccpos, npcgpos) < 90.0f)
-					{
-						npcg.state = IDLE;
-						npcg.SetCurrentAction(NULL, 0, npcg.idleID);
-						npcg.frame = 0;
-					}
-				}
-				else if (npcg.target == NPCD)
-				{
-					npcgfDir[0] = npcdpos[0] - npcgpos[0];
-					npcgfDir[1] = npcdpos[1] - npcgpos[1];
-					npcg.SetDirection(npcgfDir, npcguDir);
-					if (npcg.isFriend)
-					{
-						npcg.MoveForward(5.0f);
-					}
-					else
-					{
-						npcg.MoveForward(5.0f, TRUE, FALSE, FALSE, TRUE);
-					}
-					if (myDist(npcdpos, npcgpos) < 90.0f)
-					{
-						npcg.state = IDLE;
-						npcg.SetCurrentAction(NULL, 0, npcg.idleID);
-						npcg.frame = 0;
-					}
-				}
-				else if (npcg.target == NPCE)
-				{
-					npcgfDir[0] = npcepos[0] - npcgpos[0];
-					npcgfDir[1] = npcepos[1] - npcgpos[1];
-					npcg.SetDirection(npcgfDir, npcguDir);
-					if (npcg.isFriend)
-					{
-						npcg.MoveForward(5.0f);
-					}
-					else
-					{
-						npcg.MoveForward(5.0f, TRUE, FALSE, FALSE, TRUE);
-					}
-					if (myDist(npcepos, npcgpos) < 90.0f)
-					{
-						npcg.state = IDLE;
-						npcg.SetCurrentAction(NULL, 0, npcg.idleID);
-						npcg.frame = 0;
-					}
-				}
-				else if (npcg.target == NPCF)
-				{
-					npcgfDir[0] = npcfpos[0] - npcgpos[0];
-					npcgfDir[1] = npcfpos[1] - npcgpos[1];
-					npcg.SetDirection(npcgfDir, npcguDir);
-					if (npcg.isFriend)
-					{
-						npcg.MoveForward(5.0f);
-					}
-					else
-					{
-						npcg.MoveForward(5.0f, TRUE, FALSE, FALSE, TRUE);
-					}
-					if (myDist(npcfpos, npcgpos) < 90.0f)
-					{
-						npcg.state = IDLE;
-						npcg.SetCurrentAction(NULL, 0, npcg.idleID);
-						npcg.frame = 0;
-					}
-				}
-				else if (npcg.target == NPCG)
-				{
-					npcgfDir[0] = npcgpos[0] - npcgpos[0];
-					npcgfDir[1] = npcgpos[1] - npcgpos[1];
-					npcg.SetDirection(npcgfDir, npcguDir);
-					if (npcg.isFriend)
-					{
-						npcg.MoveForward(5.0f);
-					}
-					else
-					{
-						npcg.MoveForward(5.0f, TRUE, FALSE, FALSE, TRUE);
-					}
-					if (myDist(npcgpos, npcgpos) < 90.0f)
-					{
-						npcg.state = IDLE;
-						npcg.SetCurrentAction(NULL, 0, npcg.idleID);
-						npcg.frame = 0;
-					}
-				}
+			switch(npcg.target)
+         {
+            case NONE:
+               npcg.state = IDLE;
+               npcg.SetCurrentAction(NULL, 0, npcg.idleID);
+               npcg.frame = 0;
+               break;
+            case ACTOR:
+               npcgfDir[0] = pos[0] - npcgpos[0];
+               npcgfDir[1] = pos[1] - npcgpos[1];
+               npcg.SetDirection(npcgfDir, npcguDir);
+               npcg.MoveForward(5.0f);
+               if (myDist(pos, npcgpos) < 90.0f)
+               {
+                  npcg.state = IDLE;
+                  npcg.SetCurrentAction(NULL, 0, npcg.idleID);
+                  npcg.frame = 0;
+               }
+               break;
+            case NPCA:
+               npcgfDir[0] = npcapos[0] - npcgpos[0];
+               npcgfDir[1] = npcapos[1] - npcgpos[1];
+               npcg.SetDirection(npcgfDir, npcguDir);
+               npcg.MoveForward(5.0f);
+               if (myDist(npcapos, npcgpos) < 90.0f)
+               {
+                  npcg.state = IDLE;
+                  npcg.SetCurrentAction(NULL, 0, npcg.idleID);
+                  npcg.frame = 0;
+               }
+               break;
+            case NPCB:
+               npcgfDir[0] = npcbpos[0] - npcgpos[0];
+               npcgfDir[1] = npcbpos[1] - npcgpos[1];
+               npcg.SetDirection(npcgfDir, npcguDir);
+               npcg.MoveForward(5.0f);
+               if (myDist(npcbpos, npcgpos) < 90.0f)
+               {
+                  npcg.state = IDLE;
+                  npcg.SetCurrentAction(NULL, 0, npcg.idleID);
+                  npcg.frame = 0;
+               }
+               break;
+            case NPCC:
+               npcgfDir[0] = npccpos[0] - npcgpos[0];
+               npcgfDir[1] = npccpos[1] - npcgpos[1];
+               npcg.SetDirection(npcgfDir, npcguDir);
+               npcg.MoveForward(5.0f);
+               if (myDist(npccpos, npcgpos) < 90.0f)
+               {
+                  npcg.state = IDLE;
+                  npcg.SetCurrentAction(NULL, 0, npcg.idleID);
+                  npcg.frame = 0;
+               }
+               break;
+            case NPCD:
+               npcgfDir[0] = npcdpos[0] - npcgpos[0];
+               npcgfDir[1] = npcdpos[1] - npcgpos[1];
+               npcg.SetDirection(npcgfDir, npcguDir);
+               npcg.MoveForward(5.0f);
+               if (myDist(npcdpos, npcgpos) < 90.0f)
+               {
+                  npcg.state = IDLE;
+                  npcg.SetCurrentAction(NULL, 0, npcg.idleID);
+                  npcg.frame = 0;
+               }
+               break;
+            case NPCE:
+               npcgfDir[0] = npcepos[0] - npcgpos[0];
+               npcgfDir[1] = npcepos[1] - npcgpos[1];
+               npcg.SetDirection(npcgfDir, npcguDir);
+               npcg.MoveForward(5.0f);
+               if (myDist(npcepos, npcgpos) < 90.0f)
+               {
+                  npcg.state = IDLE;
+                  npcg.SetCurrentAction(NULL, 0, npcg.idleID);
+                  npcg.frame = 0;
+               }
+               break;
+            case NPCF:
+               npcgfDir[0] = npcfpos[0] - npcgpos[0];
+               npcgfDir[1] = npcfpos[1] - npcgpos[1];
+               npcg.SetDirection(npcgfDir, npcguDir);
+               npcg.MoveForward(5.0f);
+               if (myDist(npcfpos, npcgpos) < 90.0f)
+               {
+                  npcg.state = IDLE;
+                  npcg.SetCurrentAction(NULL, 0, npcg.idleID);
+                  npcg.frame = 0;
+               }
+               break;
+            case NPCG:
+               npcgfDir[0] = npcgpos[0] - npcgpos[0];
+               npcgfDir[1] = npcgpos[1] - npcgpos[1];
+               npcg.SetDirection(npcgfDir, npcguDir);
+               npcg.MoveForward(5.0f);
+               if (myDist(npcgpos, npcgpos) < 90.0f)
+               {
+                  npcg.state = IDLE;
+                  npcg.SetCurrentAction(NULL, 0, npcg.idleID);
+                  npcg.frame = 0;
+               }
+               break;
+            default:
+               break;
+         }
 			break;
 		case ATTACK1:
 		// normal attack 1 31 frames
@@ -4327,94 +7805,164 @@ void GameAI(int skip)
 
 			if (npcg.frame == 17)
 			{
-				if (npcg.isFriend && (friendID[0] == NPCG || friendID[1] == NPCG))
-				{
-					if (npca.state != DIE)
-					{
-						if(isHit(npcgpos, npcapos, npcgfDir, 120.0f, 40.0f))
-						{
-							npca.blood -= 30;
-							npca.state = DAMAGE;
-							npca.SetCurrentAction(NULL, 0, npca.damageID);
-							npca.frame = 0;
-						}
-					}
-					if (npcb.state != DIE)
-					{
-						if(isHit(npcgpos, npcbpos, npcgfDir, 120.0f, 40.0f))
-						{
-							npcb.blood -= 30;
-							npcb.state = DAMAGE;
-							npcb.SetCurrentAction(NULL, 0, npcb.damageID);
-							npcb.frame = 0;
-						}
-					}
-					if (npcc.state != DIE)
-					{
-						if(isHit(npcgpos, npccpos, npcgfDir, 120.0f, 40.0f))
-						{
-							npcc.blood -= 30;
-							npcc.state = DAMAGE;
-							npcc.SetCurrentAction(NULL, 0, npcc.damageID);
-							npcc.frame = 0;
-						}
-					}
-					if (npcd.state != DIE)
-					{
-						if(isHit(npcgpos, npcdpos, npcgfDir, 120.0f, 40.0f))
-						{
-							npcd.blood -= 30;
-							npcd.state = DAMAGE;
-							npcd.SetCurrentAction(NULL, 0, npcd.damageID);
-							npcd.frame = 0;
-						}
-					}
-					if (npce.state != DIE)
-					{
-						if(isHit(npcgpos, npcepos, npcgfDir, 120.0f, 40.0f))
-						{
-							npce.blood -= 30;
-							npce.state = DAMAGE;
-							npce.SetCurrentAction(NULL, 0, npce.damageID);
-							npce.frame = 0;
-						}
-					}
-					if (npcf.state != DIE)
-					{
-						if(isHit(npcgpos, npcfpos, npcgfDir, 120.0f, 40.0f))
-						{
-							npcf.blood -= 30;
-							npcf.state = DAMAGE;
-							npcf.SetCurrentAction(NULL, 0, npcf.damageID);
-							npcf.frame = 0;
-						}
-					}
-					if (npcg.state != DIE)
-					{
-						if(isHit(npcgpos, npcgpos, npcgfDir, 120.0f, 40.0f))
-						{
-							npcg.blood -= 30;
-							npcg.state = DAMAGE;
-							npcg.SetCurrentAction(NULL, 0, npcg.damageID);
-							npcg.frame = 0;
-						}
-					}
-				}
-				else
-				{
-					if (actor.state != DIE)
-					{
-						if(isHit(npcgpos, pos, npcgfDir, 120.0f, 40.0f))
-						{
-							actor.blood -= 30;
-							actor.state = DAMAGE;
-							actor.SetCurrentAction(NULL, 0, heavyDamagedID);
-							actor.frame = 0;
-							attackKeyLocked = true;
-							movementKeyLocked = true;
-						}		
-					}	
-				}
+				if (npcg.isFriend)
+            {
+               if (npca.state != DIE && !npca.isFriend)
+               {
+                  if(isHit(npcgpos, npcapos, npcgfDir, 120.0f, 40.0f))
+                  {
+                     npca.blood -= 30;
+                     npca.state = DAMAGE;
+                     npca.SetCurrentAction(NULL, 0, npca.damageID);
+                     npca.frame = 0;
+                  }
+               }
+               if (npcb.state != DIE && !npcb.isFriend)
+               {
+                  if(isHit(npcgpos, npcbpos, npcgfDir, 120.0f, 40.0f))
+                  {
+                     npcb.blood -= 30;
+                     npcb.state = DAMAGE;
+                     npcb.SetCurrentAction(NULL, 0, npcb.damageID);
+                     npcb.frame = 0;
+                  }
+               }
+               if (npcc.state != DIE && !npcc.isFriend)
+               {
+                  if(isHit(npcgpos, npccpos, npcgfDir, 120.0f, 40.0f))
+                  {
+                     npcc.blood -= 30;
+                     npcc.state = DAMAGE;
+                     npcc.SetCurrentAction(NULL, 0, npcc.damageID);
+                     npcc.frame = 0;
+                  }
+               }
+               if (npcd.state != DIE && !npcd.isFriend)
+               {
+                  if(isHit(npcgpos, npcdpos, npcgfDir, 120.0f, 40.0f))
+                  {
+                     npcd.blood -= 30;
+                     npcd.state = DAMAGE;
+                     npcd.SetCurrentAction(NULL, 0, npcd.damageID);
+                     npcd.frame = 0;
+                  }
+               }
+               if (npce.state != DIE && !npce.isFriend)
+               {
+                  if(isHit(npcgpos, npcepos, npcgfDir, 120.0f, 40.0f))
+                  {
+                     npce.blood -= 30;
+                     npce.state = DAMAGE;
+                     npce.SetCurrentAction(NULL, 0, npce.damageID);
+                     npce.frame = 0;
+                  }
+               }
+               if (npcf.state != DIE && !npcf.isFriend)
+               {
+                  if(isHit(npcgpos, npcfpos, npcgfDir, 120.0f, 40.0f))
+                  {
+                     npcf.blood -= 30;
+                     npcf.state = DAMAGE;
+                     npcf.SetCurrentAction(NULL, 0, npcf.damageID);
+                     npcf.frame = 0;
+                  }
+               }
+               if (npcg.state != DIE && !npcg.isFriend)
+               {
+                  if(isHit(npcgpos, npcgpos, npcgfDir, 120.0f, 40.0f))
+                  {
+                     npcg.blood -= 30;
+                     npcg.state = DAMAGE;
+                     npcg.SetCurrentAction(NULL, 0, npcg.damageID);
+                     npcg.frame = 0;
+                  }
+               }
+            }
+            else
+            {
+               if (actor.state != DIE)
+               {
+                  if(isHit(npcgpos, pos, npcgfDir, 120.0f, 40.0f))
+                  {
+                     actor.blood -= 30;
+                     actor.state = DAMAGE;
+                     actor.SetCurrentAction(NULL, 0, heavyDamagedID);
+                     actor.frame = 0;
+                     attackKeyLocked = true;
+                     movementKeyLocked = true;
+                  }     
+               }
+               if (npca.state != DIE && npca.isFriend)
+               {
+                  if(isHit(npcgpos, npcapos, npcgfDir, 120.0f, 40.0f))
+                  {
+                     npca.blood -= 30;
+                     npca.state = DAMAGE;
+                     npca.SetCurrentAction(NULL, 0, npca.damageID);
+                     npca.frame = 0;
+                  }
+               }
+               if (npcb.state != DIE && npcb.isFriend)
+               {
+                  if(isHit(npcgpos, npcbpos, npcgfDir, 120.0f, 40.0f))
+                  {
+                     npcb.blood -= 30;
+                     npcb.state = DAMAGE;
+                     npcb.SetCurrentAction(NULL, 0, npcb.damageID);
+                     npcb.frame = 0;
+                  }
+               }
+               if (npcc.state != DIE && npcc.isFriend)
+               {
+                  if(isHit(npcgpos, npccpos, npcgfDir, 120.0f, 40.0f))
+                  {
+                     npcc.blood -= 30;
+                     npcc.state = DAMAGE;
+                     npcc.SetCurrentAction(NULL, 0, npcc.damageID);
+                     npcc.frame = 0;
+                  }
+               }
+               if (npcd.state != DIE && npcd.isFriend)
+               {
+                  if(isHit(npcgpos, npcdpos, npcgfDir, 120.0f, 40.0f))
+                  {
+                     npcd.blood -= 30;
+                     npcd.state = DAMAGE;
+                     npcd.SetCurrentAction(NULL, 0, npcd.damageID);
+                     npcd.frame = 0;
+                  }
+               }
+               if (npce.state != DIE && npce.isFriend)
+               {
+                  if(isHit(npcgpos, npcepos, npcgfDir, 120.0f, 40.0f))
+                  {
+                     npce.blood -= 30;
+                     npce.state = DAMAGE;
+                     npce.SetCurrentAction(NULL, 0, npce.damageID);
+                     npce.frame = 0;
+                  }
+               }
+               if (npcf.state != DIE && npcf.isFriend)
+               {
+                  if(isHit(npcgpos, npcfpos, npcgfDir, 120.0f, 40.0f))
+                  {
+                     npcf.blood -= 30;
+                     npcf.state = DAMAGE;
+                     npcf.SetCurrentAction(NULL, 0, npcf.damageID);
+                     npcf.frame = 0;
+                  }
+               }
+               if (npcg.state != DIE && npcg.isFriend)
+               {
+                  if(isHit(npcgpos, npcgpos, npcgfDir, 120.0f, 40.0f))
+                  {
+                     npcg.blood -= 30;
+                     npcg.state = DAMAGE;
+                     npcg.SetCurrentAction(NULL, 0, npcg.damageID);
+                     npcg.frame = 0;
+                  }
+               }
+            }
 			}
 			if (npcg.frame == 30)
 			{
@@ -4425,6 +7973,176 @@ void GameAI(int skip)
 			break;
 		case ATTACK2:
 		// normal attack 2 48 frames
+         npcg.Play(ONCE, (float) skip, FALSE, TRUE);
+         npcg.frame++;
+
+         if (npcg.frame == 17)
+         {
+            if (npcg.isFriend)
+            {
+               if (npca.state != DIE && !npca.isFriend)
+               {
+                  if(isHit(npcgpos, npcapos, npcgfDir, 120.0f, 40.0f))
+                  {
+                     npca.blood -= 30;
+                     npca.state = DAMAGE;
+                     npca.SetCurrentAction(NULL, 0, npca.damageID);
+                     npca.frame = 0;
+                  }
+               }
+               if (npcb.state != DIE && !npcb.isFriend)
+               {
+                  if(isHit(npcgpos, npcbpos, npcgfDir, 120.0f, 40.0f))
+                  {
+                     npcb.blood -= 30;
+                     npcb.state = DAMAGE;
+                     npcb.SetCurrentAction(NULL, 0, npcb.damageID);
+                     npcb.frame = 0;
+                  }
+               }
+               if (npcc.state != DIE && !npcc.isFriend)
+               {
+                  if(isHit(npcgpos, npccpos, npcgfDir, 120.0f, 40.0f))
+                  {
+                     npcc.blood -= 30;
+                     npcc.state = DAMAGE;
+                     npcc.SetCurrentAction(NULL, 0, npcc.damageID);
+                     npcc.frame = 0;
+                  }
+               }
+               if (npcd.state != DIE && !npcd.isFriend)
+               {
+                  if(isHit(npcgpos, npcdpos, npcgfDir, 120.0f, 40.0f))
+                  {
+                     npcd.blood -= 30;
+                     npcd.state = DAMAGE;
+                     npcd.SetCurrentAction(NULL, 0, npcd.damageID);
+                     npcd.frame = 0;
+                  }
+               }
+               if (npce.state != DIE && !npce.isFriend)
+               {
+                  if(isHit(npcgpos, npcepos, npcgfDir, 120.0f, 40.0f))
+                  {
+                     npce.blood -= 30;
+                     npce.state = DAMAGE;
+                     npce.SetCurrentAction(NULL, 0, npce.damageID);
+                     npce.frame = 0;
+                  }
+               }
+               if (npcf.state != DIE && !npcf.isFriend)
+               {
+                  if(isHit(npcgpos, npcfpos, npcgfDir, 120.0f, 40.0f))
+                  {
+                     npcf.blood -= 30;
+                     npcf.state = DAMAGE;
+                     npcf.SetCurrentAction(NULL, 0, npcf.damageID);
+                     npcf.frame = 0;
+                  }
+               }
+               if (npcg.state != DIE && !npcg.isFriend)
+               {
+                  if(isHit(npcgpos, npcgpos, npcgfDir, 120.0f, 40.0f))
+                  {
+                     npcg.blood -= 30;
+                     npcg.state = DAMAGE;
+                     npcg.SetCurrentAction(NULL, 0, npcg.damageID);
+                     npcg.frame = 0;
+                  }
+               }
+            }
+            else
+            {
+               if (actor.state != DIE)
+               {
+                  if(isHit(npcgpos, pos, npcgfDir, 120.0f, 40.0f))
+                  {
+                     actor.blood -= 30;
+                     actor.state = DAMAGE;
+                     actor.SetCurrentAction(NULL, 0, heavyDamagedID);
+                     actor.frame = 0;
+                     attackKeyLocked = true;
+                     movementKeyLocked = true;
+                  }     
+               }
+               if (npca.state != DIE && npca.isFriend)
+               {
+                  if(isHit(npcgpos, npcapos, npcgfDir, 120.0f, 40.0f))
+                  {
+                     npca.blood -= 30;
+                     npca.state = DAMAGE;
+                     npca.SetCurrentAction(NULL, 0, npca.damageID);
+                     npca.frame = 0;
+                  }
+               }
+               if (npcb.state != DIE && npcb.isFriend)
+               {
+                  if(isHit(npcgpos, npcbpos, npcgfDir, 120.0f, 40.0f))
+                  {
+                     npcb.blood -= 30;
+                     npcb.state = DAMAGE;
+                     npcb.SetCurrentAction(NULL, 0, npcb.damageID);
+                     npcb.frame = 0;
+                  }
+               }
+               if (npcc.state != DIE && npcc.isFriend)
+               {
+                  if(isHit(npcgpos, npccpos, npcgfDir, 120.0f, 40.0f))
+                  {
+                     npcc.blood -= 30;
+                     npcc.state = DAMAGE;
+                     npcc.SetCurrentAction(NULL, 0, npcc.damageID);
+                     npcc.frame = 0;
+                  }
+               }
+               if (npcd.state != DIE && npcd.isFriend)
+               {
+                  if(isHit(npcgpos, npcdpos, npcgfDir, 120.0f, 40.0f))
+                  {
+                     npcd.blood -= 30;
+                     npcd.state = DAMAGE;
+                     npcd.SetCurrentAction(NULL, 0, npcd.damageID);
+                     npcd.frame = 0;
+                  }
+               }
+               if (npce.state != DIE && npce.isFriend)
+               {
+                  if(isHit(npcgpos, npcepos, npcgfDir, 120.0f, 40.0f))
+                  {
+                     npce.blood -= 30;
+                     npce.state = DAMAGE;
+                     npce.SetCurrentAction(NULL, 0, npce.damageID);
+                     npce.frame = 0;
+                  }
+               }
+               if (npcf.state != DIE && npcf.isFriend)
+               {
+                  if(isHit(npcgpos, npcfpos, npcgfDir, 120.0f, 40.0f))
+                  {
+                     npcf.blood -= 30;
+                     npcf.state = DAMAGE;
+                     npcf.SetCurrentAction(NULL, 0, npcf.damageID);
+                     npcf.frame = 0;
+                  }
+               }
+               if (npcg.state != DIE && npcg.isFriend)
+               {
+                  if(isHit(npcgpos, npcgpos, npcgfDir, 120.0f, 40.0f))
+                  {
+                     npcg.blood -= 30;
+                     npcg.state = DAMAGE;
+                     npcg.SetCurrentAction(NULL, 0, npcg.damageID);
+                     npcg.frame = 0;
+                  }
+               }
+            }
+         }
+         if (npcg.frame == 47)
+         {
+            npcg.state = IDLE;
+            npcg.SetCurrentAction(NULL, 0, npcg.idleID); 
+            npcg.frame = 0;
+         }
 			break;
 		case DAMAGE:
 		// no damage
@@ -4442,19 +8160,30 @@ void GameAI(int skip)
 			}
 			break;
 		case DIE:
-		// die
+		// die 31
 			npcg.Play(ONCE, (float) skip, FALSE, TRUE);
 			if (!npcg.isFriend)
 			{
 				npcg.frame++;
-				if (npcg.frame == 300)
+				if (npcg.frame == 60)
 				{
-					npcg.state = IDLE;
-					npcg.SetCurrentAction(NULL, 0, npcg.idleID);
-					npcg.frame = 0;
-					npcg.blood = npcg.fullBlood;
+					if (teammateID[0] == NONE)
+					{
+						teammateID[0] = NPCG;
+						npcg.state = IDLE;
+						npcg.SetCurrentAction(NULL, 0, npcg.idleID);
+						npcg.frame = 0;
+						npcg.blood = npcg.fullBlood;
+					}
+					else if (teammateID[1] == NONE)
+					{
+						teammateID[1] = NPCG;
+						npcg.state = IDLE;
+						npcg.SetCurrentAction(NULL, 0, npcg.idleID);
+						npcg.frame = 0;
+						npcg.blood = npcg.fullBlood;
+					}
 					npcg.isFriend = true;
-					
 				}
 			}
 			break;
@@ -4749,11 +8478,11 @@ void NpcControl(BYTE code, BOOL4 value){
 		{
 			isFollow[0] = true;
 		}
-		else if (code == FY_Q)
+		else if (code == FY_D)
 		{
 			isFollow[1] = false;
 		}
-		else
+		else if (code == FY_F)
 		{
 			isFollow[1] = true;
 		}
