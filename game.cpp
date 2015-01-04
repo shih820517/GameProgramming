@@ -8512,7 +8512,7 @@ void RenderIt(int skip)
    	}
 
 
-   	vp.RenderSprites(sID2, TRUE, TRUE);
+   	//vp.RenderSprites(sID2, TRUE, TRUE);
 
 
 	// get camera's data
