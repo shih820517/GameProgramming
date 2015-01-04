@@ -869,6 +869,9 @@ bool moving()
  ----------------------------------------------------------------*/
 void GameAI(int skip)
 {
+	if(!pause){
+
+	
 	FnCamera camera;
 	FnObject object, terrain;
 
@@ -4588,6 +4591,7 @@ void GameAI(int skip)
 		cuDir[2] =  (-cfDir[0] * cuDir[0] - cfDir[1] * cuDir[1]) / cfDir[2];
 		camera.SetDirection(cfDir, cuDir);
 	}
+	}
 }
 
 void RenderIt(int skip)
@@ -4835,8 +4839,18 @@ void PauseGame(BYTE code, BOOL4 value){
 		pauseP.Object(pauseID);
 		pauseP.Load("dominating.wav");
 		pauseP.Play(ONCE);
-		if(pause) pause = false;
-		else pause = true;
+
+		FnAudio mP;
+		mP.Object(mmID);
+		
+		if(pause) {
+			mP.Play(LOOP);
+			pause = false;
+		}
+		else{
+			mP.Pause();
+			pause = true;
+		}
 	}
 }
 
