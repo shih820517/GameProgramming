@@ -146,6 +146,8 @@ int oldX, oldY, oldXM, oldYM, oldXMM, oldYMM;
 */
 bool moveKeyState[4] = {false, false, false, false};
 
+// 主選單
+bool welcome = true;
 bool pause = false;
 
 /*
@@ -1003,8 +1005,12 @@ bool moving()
  ----------------------------------------------------------------*/
 void GameAI(int skip)
 {
-	if(!pause)
+	if(!pause && !welcome) 
 	{
+		// 還回callback
+		FyDefineHotKey(FY_UP, Movement, FALSE);      // Up for moving forward
+		FyDefineHotKey(FY_DOWN, Movement, FALSE);    // Down for moving back
+
 		FnCamera camera;
 		FnObject object, terrain;
 		atID = FyCreateAudio();
@@ -8453,6 +8459,13 @@ void GameAI(int skip)
 			camera.SetDirection(cfDir, cuDir);
 		}
 	}
+	if(welcome) 
+	{
+		// 移動箭頭
+		FyDefineHotKey(FY_UP, selectMenu1, FALSE);
+		FyDefineHotKey(FY_DOWN, selectMenu2, FALSE);
+		FyDefineHotKey(FY_RETURN, enterMenu, FALSE);
+	}
 }
 
 void RenderIt(int skip)
@@ -8831,5 +8844,59 @@ void ZoomCam(int x, int y)
 		model.Translate(0.0f, 0.0f, (float)(x - oldXMM)*10.0f, LOCAL);
 		oldXMM = x;
 		oldYMM = y;
+	}
+}
+
+void selectMenu1(BYTE code, BOOL4 value)
+{
+	if (code == FY_UP) 
+	{
+    	if (value) 
+		{
+			if(welcomeMenu != 1)
+			{
+				welcomeMenu = 1;
+
+				FnSpriteText sp20;
+				sp20.Object(spID21);
+				sp20.SetPosition(410, 470, 0);
+			}
+		}
+	}
+}
+
+void selectMenu2(BYTE code, BOOL4 value)
+{
+	if (code == FY_DOWN) 
+	{
+    	if (value) 
+		{
+			if(welcomeMenu != 2)
+			{
+				welcomeMenu = 2;
+
+				FnSpriteText sp20;
+				sp20.Object(spID21);
+				sp20.SetPosition(410, 440, 0);
+			}
+		}
+	}
+}
+
+void enterMenu(BYTE code, BOOL4 value)
+{
+	if (code == FY_RETURN) 
+	{
+    	if (value) 
+		{
+			if(welcomeMenu == 1)
+			{
+				welcome = false;
+			}
+			else if(welcomeMenu == 2)
+			{	
+    			FyQuitFlyWin32();
+    		}
+		}
 	}
 }
