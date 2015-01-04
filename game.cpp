@@ -114,8 +114,14 @@ SCENEid sID20;
 OBJECTid cID, tID, oID;         // the main camera and the terrain for terrain following
 
 OBJECTid spID0 = FAILED_ID;		// this is a sprite id for UI
+
+OBJECTid spID1 = FAILED_ID;	
+OBJECTid spID2 = FAILED_ID;	
+OBJECTid spID3 = FAILED_ID;	
+
 OBJECTid spID20 = FAILED_ID;     // the sprite for text
 OBJECTid spID21 = FAILED_ID;     // the sprite for text
+
 
 CHARACTERid actorID; // the major character
 CHARACTERid npcaID, npcbID, npccID, npcdID, npceID, npcfID, npcgID;
@@ -131,11 +137,13 @@ TEXTid textID = FAILED_ID;
 GAMEFX_SYSTEMid gFXID = FAILED_ID;
 GAMEFX_SYSTEMid dFXID = FAILED_ID;
 
+AUDIOid hurtID;//?�傷?��?
 AUDIOid mmID;//bkground
 AUDIOid atID;//actor
 AUDIOid npcID;//npcA
 AUDIOid npc2ID;//npcB
-AUDIOid pauseID;
+AUDIOid pauseID, menuID, enID;
+
 
 // some globals
 int frame = 0;
@@ -149,11 +157,21 @@ int oldX, oldY, oldXM, oldYM, oldXMM, oldYMM;
 */
 bool moveKeyState[4] = {false, false, false, false};
 
-// 主選單
+
 bool welcome = true;
 bool pause = false;
 
+
+int pausePointer = 0;
+
+const int pausePos[4][2] = {{450, 375},{470, 282},{490, 190},{510, 93}};
+
+bool bkmusic = true;
+bool enmusic = false;
+
+
 int welcomeMenu = 1;
+
 
 /*
 0 normal attack
@@ -182,9 +200,13 @@ void Reset(BYTE, BOOL4);
 void cameraRotate(BYTE, BOOL4);
 void cameraZoom(BYTE, BOOL4);
 void PauseGame(BYTE, BOOL4);
+
+void PauseAction(BYTE, BOOL4);
+
 void selectMenu1(BYTE, BOOL4);
 void selectMenu2(BYTE, BOOL4);
 void enterMenu(BYTE, BOOL4);
+
 
 // timer callbacks
 void GameAI(int);
@@ -238,6 +260,13 @@ void FyMain(int argc, char **argv)
 
    	//setup the music 
 	FySetAudioPath("Data\\NTU5\\sound");
+
+	menuID = FyCreateAudio();
+	FnAudio menuP;
+	menuP.Object(menuID);
+	menuP.Load("menu.wav");
+
+
 	mmID = FyCreateAudio();
 	FnAudio mP;
 	mP.Object(mmID);
@@ -271,14 +300,27 @@ void FyMain(int argc, char **argv)
 	spritescene20.SetSpriteWorldSize(1024, 768);
 
 	//After create scene then create a sprite for user interface
+
+	//FnSprite sp;
+
+	//spID0 = spritescene.CreateObject(SPRITE);
+	//sp.Object(spID0);
+	//sp.SetSize(1024, 350);
+	//sp.SetImage("lbj", 0, NULL, FALSE, NULL, 2, FALSE, FILTER_LINEAR);
+	//sp.SetPosition(0, 256, 0);
+
+
+
+	
+
+
+
+	//init the en
+	enID = FyCreateAudio();
+
+
 	FnSprite sp;
 	FnSpriteText sp20;
-
-	spID0 = spritescene.CreateObject(SPRITE);
-	sp.ID(spID0);
-	sp.SetSize(200, 200);
-	sp.SetImage("chiou_head", 0, NULL, FALSE, NULL, 2, TRUE, FILTER_LINEAR);
-	sp.SetPosition(0, 568, 0);
 
 	spID20 = spritescene20.CreateObject(SPRITE);
 	sp20.Object(spID20);
@@ -297,6 +339,26 @@ void FyMain(int argc, char **argv)
 	sp20.SetSize(30, 30);
 	sp20.SetImage("arrow", 0, NULL, FALSE, NULL, 2, TRUE, FILTER_LINEAR);
 	sp20.SetPosition(410, 470, 0);
+
+
+	// this is pause sprite
+	FnSprite sp1;
+	spID1 = spritescene.CreateObject(SPRITE);
+	sp1.Object(spID1);
+	sp1.SetSize(1024, 768);
+	sp1.SetImage("pause", 0, NULL, FALSE, NULL, 2, TRUE, FILTER_LINEAR);
+	sp1.SetPosition(0, 0, 0);
+
+	FnSprite sp2; 
+	spID2 = spritescene.CreateObject(SPRITE);
+	sp2.Object(spID2);
+	sp2.SetSize(40,40);
+	sp2.SetImage("temp", 0, NULL, FALSE, NULL, 2, TRUE, FILTER_LINEAR);
+	sp2.SetPosition(510, 93, 0);
+	sp2.SetPosition(490, 190, 0);
+	sp2.SetPosition(470, 282, 0);
+	sp2.SetPosition(450, 375, 0);
+
 
 	// load the scene
 	scene.Load("gameScene01");
@@ -647,9 +709,10 @@ void FyMain(int argc, char **argv)
 	FyDefineHotKey(FY_F1, Reset, FALSE);
 	FyDefineHotKey(FY_1, cameraRotate, FALSE);
 	FyDefineHotKey(FY_2, cameraRotate, FALSE);
+	FyDefineHotKey(FY_3, cameraZoom, FALSE);
+	FyDefineHotKey(FY_4, cameraZoom, FALSE);
+	FyDefineHotKey(FY_RETURN, PauseAction, FALSE);
 
-	FyDefineHotKey(FY_Q, cameraZoom, FALSE);
-	FyDefineHotKey(FY_W, cameraZoom, FALSE);
 
 	// define some mouse functions
 	FyBindMouseFunction(LEFT_MOUSE, InitPivot, PivotCam, NULL, NULL);
@@ -1041,6 +1104,13 @@ void GameAI(int skip)
 {
 	if(!pause && !welcome) 
 	{
+
+		// 還回callback
+		FyDefineHotKey(FY_UP, Movement, FALSE);      // Up for moving forward
+		FyDefineHotKey(FY_DOWN, Movement, FALSE);    // Down for moving back
+		FyDefineHotKey(FY_RETURN, PauseAction, FALSE); // Pause enters
+
+
 		FnCamera camera;
 		FnObject object, terrain;
 		atID = FyCreateAudio();
@@ -8511,9 +8581,9 @@ void RenderIt(int skip)
    		vp.RenderSprites(sID20, TRUE, TRUE);
    	}
 
-
-   	//vp.RenderSprites(sID2, TRUE, TRUE);
-
+   	if(pause){
+   		vp.RenderSprites(sID2, TRUE, TRUE);
+   	}
 
 	// get camera's data
 	FnCamera camera;
@@ -8634,22 +8704,55 @@ void Movement(BYTE code, BOOL4 value)
 {
 	if (value)
 	{
-		if (code == FY_UP)
-		{
-			moveKeyState[0] = true;
+		if(pause){
+			//when gamestate is pause
+			if (code == FY_UP)
+			{
+				FnSprite sp;
+				sp.Object(spID2);
+				if(pausePointer == 0){
+
+				}
+				else{
+					pausePointer --;
+					sp.SetPosition(pausePos[pausePointer][0], pausePos[pausePointer][1],0);
+				}
+				
+			}
+			else if (code == FY_DOWN)
+			{
+				FnSprite sp;
+				sp.Object(spID2);
+				if(pausePointer == 3){
+
+				}
+				else{
+					pausePointer ++;
+					sp.SetPosition(pausePos[pausePointer][0], pausePos[pausePointer][1],0);
+				}
+			}
 		}
-		else if (code == FY_DOWN)
-		{
-			moveKeyState[1] = true;
+
+		else{
+			if (code == FY_UP)
+			{
+				moveKeyState[0] = true;
+			}
+			else if (code == FY_DOWN)
+			{
+				moveKeyState[1] = true;
+			}
+			else if (code == FY_RIGHT)
+			{
+				moveKeyState[2] = true;
+			}
+			else
+			{
+				moveKeyState[3] = true;
+			}
 		}
-		else if (code == FY_RIGHT)
-		{
-			moveKeyState[2] = true;
-		}
-		else
-		{
-			moveKeyState[3] = true;
-		}
+
+		
 	}
 	else
 	{
@@ -8761,6 +8864,63 @@ void QuitGame(BYTE code, BOOL4 value)
 	}
 }
 
+void PauseAction(BYTE code, BOOL4 value){
+	if(value){
+		if(code == FY_RETURN) {
+			if(pause){
+				//load the bks
+				FnAudio mP;
+				mP.Object(mmID);
+				FnAudio menuP; 
+				menuP.Object(menuID);
+
+				
+				FnAudio enP; 
+				enP.Object(enID);
+				enP.Load("enen.wav");
+
+				switch(pausePointer){
+					case 0:
+						//toggle the bkmusic
+						if(bkmusic) {
+							bkmusic = false;
+							menuP.Stop();
+							mP.Stop();
+						}
+						else {
+							bkmusic = true;
+							menuP.Play(LOOP);
+						}	
+						break;
+
+					case 1:
+						pause = false;
+						break;
+					case 2:
+						pause = false;
+						welcome = true;
+						break;
+					case 3:
+						//toggle the enmusic
+						if(enmusic){
+							enmusic = false;
+							enP.Stop();
+						}
+						else{
+							enmusic = true;
+							enP.Play(ONCE);
+						}
+						
+						
+						break;	
+			}
+
+			
+			}
+		}
+	}
+}
+
 void PauseGame(BYTE code, BOOL4 value){
 	if(value){
 		pauseID = FyCreateAudio();
@@ -8771,13 +8931,23 @@ void PauseGame(BYTE code, BOOL4 value){
 
 		FnAudio mP;
 		mP.Object(mmID);
+
+		
+		FnAudio menuP; 
+		menuP.Object(menuID);
+		
+		
+
 		
 		if(pause) {
 			mP.Play(LOOP);
+
+			menuP.Stop();
 			pause = false;
 		}
 		else{
 			mP.Pause();
+			menuP.Play(LOOP);
 			pause = true;
 		}
 	}
