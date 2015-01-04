@@ -8944,14 +8944,19 @@ void PauseGame(BYTE code, BOOL4 value){
 
 		
 		if(pause) {
-			mP.Play(LOOP);
+			if(bkmusic){
+				mP.Play(LOOP);
 
+			}
 			menuP.Stop();
+			
 			pause = false;
 		}
 		else{
-			mP.Pause();
-			menuP.Play(LOOP);
+			if(bkmusic){
+				mP.Pause();
+				menuP.Play(LOOP);
+			}	
 			pause = true;
 		}
 	}
