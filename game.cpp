@@ -127,6 +127,12 @@ TEXTid textID = FAILED_ID;
 
 GAMEFX_SYSTEMid gFXID = FAILED_ID;
 GAMEFX_SYSTEMid dFXID = FAILED_ID;
+GAMEFX_SYSTEMid npcbFXID = FAILED_ID;
+GAMEFX_SYSTEMid npccFXID = FAILED_ID;
+GAMEFX_SYSTEMid npcdFXID = FAILED_ID;
+GAMEFX_SYSTEMid npceFXID = FAILED_ID;
+GAMEFX_SYSTEMid npcfFXID = FAILED_ID;
+GAMEFX_SYSTEMid npcgFXID = FAILED_ID;
 
 AUDIOid mmID;//bkground
 AUDIOid atID;//actor
@@ -196,6 +202,7 @@ inline float turnDegree(float dist, float stepLength);
 int nearestFriend(int myID, float *mypos);
 int nearestEnemy(int myID, float *mypos);
 bool moving();
+void playFX(int);
 
 MyNpc npca(200);
 MyNpc npcb(200);
@@ -994,6 +1001,116 @@ bool moving()
 	}
 }
 
+
+void playFX(int skip)
+{
+	// play game FX  actor
+	if (gFXID != FAILED_ID) 
+	{
+		FnGameFXSystem gxS(gFXID);
+		BOOL4 beOK = gxS.Play((float)skip, ONCE);
+		if (!beOK) 
+		{
+			FnScene scene(sID);
+			scene.DeleteGameFXSystem(gFXID);
+			gFXID = FAILED_ID;
+		}
+	}
+
+				// play game FX donzu
+	if (dFXID != FAILED_ID) 
+	{
+		FnGameFXSystem dxS(dFXID);
+		BOOL4 beOK = dxS.Play((float)skip, ONCE);
+		if (!beOK) 
+		{
+			FnScene scene(sID);
+			scene.DeleteGameFXSystem(dFXID);
+			dFXID = FAILED_ID;
+		}
+	}
+
+
+					// play game FX npcb
+	if (npcbFXID != FAILED_ID) 
+	{
+		FnGameFXSystem npcbxS(npcbFXID);
+		BOOL4 beOK = npcbxS.Play((float)skip, ONCE);
+		if (!beOK) 
+		{
+			FnScene scene(sID);
+			scene.DeleteGameFXSystem(npcbFXID);
+			npcbFXID = FAILED_ID;
+		}
+	}
+
+					// play game FX npcc
+	if (npccFXID != FAILED_ID)  
+	{
+		FnGameFXSystem npccxS(npccFXID);
+		BOOL4 beOK =npccxS.Play((float)skip, ONCE);
+		if (!beOK) 
+		{
+			FnScene scene(sID);
+			scene.DeleteGameFXSystem(npccFXID);
+			npccFXID = FAILED_ID;
+		}
+	}
+
+
+					// play game FX npcd
+	if (npcdFXID != FAILED_ID) 
+	{
+		FnGameFXSystem npcdxS(npcdFXID);
+		BOOL4 beOK = npcdxS.Play((float)skip, ONCE);
+		if (!beOK) 
+		{
+			FnScene scene(sID);
+			scene.DeleteGameFXSystem(npcdFXID);
+			npcdFXID = FAILED_ID;
+		}
+	}
+
+					// play game FX npce
+	if (npceFXID != FAILED_ID) 
+	{
+		FnGameFXSystem npcexS(npceFXID);
+		BOOL4 beOK = npcexS.Play((float)skip, ONCE);
+		if (!beOK) 
+		{
+			FnScene scene(sID);
+			scene.DeleteGameFXSystem(npceFXID);
+			npceFXID = FAILED_ID;
+		}
+	}
+					// play game FX npcf
+	if (npcfFXID != FAILED_ID) 
+	{
+		FnGameFXSystem npcfxS(npcfFXID);
+		BOOL4 beOK = npcfxS.Play((float)skip, ONCE);
+		if (!beOK) 
+		{
+			FnScene scene(sID);
+			scene.DeleteGameFXSystem(npcfFXID);
+			npcfFXID = FAILED_ID;
+		}
+	}
+
+
+						// play game FX npcg
+	if (npcgFXID != FAILED_ID) 
+	{
+		FnGameFXSystem npcgxS(npcgFXID);
+		BOOL4 beOK = npcgxS.Play((float)skip, ONCE);
+		if (!beOK) 
+		{
+			FnScene scene(sID);
+			scene.DeleteGameFXSystem(npcgFXID);
+			npcgFXID = FAILED_ID;
+		}
+	}
+}
+
 /*----------------------------------------------------------------
   ||||||||     ||||    ||      || ||||||||||    ||||      ||||||  
  ||           ||  ||   ||||  |||| ||           ||  ||       ||   
@@ -1041,6 +1158,12 @@ void GameAI(int skip)
 
 	FnGameFXSystem gxS(gFXID);//actor
 	FnGameFXSystem dxS(dFXID); //Don
+	FnGameFXSystem npcbxS(npcbFXID);//npcb
+	FnGameFXSystem npccxS(npccFXID); //c
+	FnGameFXSystem npcdxS(npcdFXID);//d
+	FnGameFXSystem npceS(npceFXID); //e
+	FnGameFXSystem npcfxS(npcfFXID);//f
+	FnGameFXSystem npcgxS(npcgFXID); //g
 
 	if(!attackKeyLocked){
 		if(attackKeyState){
@@ -1066,12 +1189,7 @@ void GameAI(int skip)
 					attackKeyLocked = true;
 					movementKeyLocked = true;
 
-					FnScene scene(sID);
-					gFXID = scene.CreateGameFXSystem();
-					OBJECTid baseID = actor.GetBaseObject();
-					FnGameFXSystem gxS(gFXID);
-					BOOL4 beOK = gxS.Load("Lyubu_skill01", TRUE);
-					gxS.SetParentObjectForAll(baseID);
+
 					
 
 					break;
@@ -1079,31 +1197,7 @@ void GameAI(int skip)
 		}
 	}
 
-	// play game FX
-	if (gFXID != FAILED_ID) 
-	{
-		FnGameFXSystem gxS(gFXID);
-		BOOL4 beOK = gxS.Play((float) skip, ONCE);
-		if (!beOK) 
-		{
-			FnScene scene(sID);
-			scene.DeleteGameFXSystem(gFXID);
-			gFXID = FAILED_ID;
-		}
-	}
-
-				// play game FX
-	if (dFXID != FAILED_ID) 
-	{
-		FnGameFXSystem dxS(dFXID);
-		BOOL4 beOK = dxS.Play((float) skip, ONCE);
-		if (!beOK) 
-		{
-			FnScene scene(sID);
-			scene.DeleteGameFXSystem(dFXID);
-			dFXID = FAILED_ID;
-		}
-	}
+	//playFX(skip);
 
 
 	actor.GetPosition(pos);
@@ -1204,6 +1298,15 @@ void GameAI(int skip)
 			actor.frame++;
 			if (actor.frame == 5)
 			{	
+				FnScene scene(sID);
+				scene.DeleteGameFXSystem(gFXID);
+				gFXID = FAILED_ID;
+				gFXID = scene.CreateGameFXSystem();
+				OBJECTid baseID = actor.GetBaseObject();
+				FnGameFXSystem gxS(gFXID);
+				gxS.Reset();
+				BOOL4 beOK = gxS.Load("Lyubu_skill01", TRUE);
+				gxS.SetParentObjectForAll(baseID);
 				aP.Load("att1.wav");
 				aP.Play(ONCE);
 				if (npca.state != DIE && !npca.isFriend)
@@ -1307,9 +1410,12 @@ void GameAI(int skip)
 
 			if (actor.frame == 3){
 					FnScene scene(sID);
+					scene.DeleteGameFXSystem(gFXID);
+					gFXID = FAILED_ID;
 					gFXID = scene.CreateGameFXSystem();
 					OBJECTid baseID = actor.GetBaseObject();
 					FnGameFXSystem gxS(gFXID);
+					gxS.Reset();
 					BOOL beOK = gxS.Load("Lyuatt3", TRUE);
 					gxS.SetParentObjectForAll(baseID);
 					aP.Load("att3.wav");
@@ -1416,15 +1522,21 @@ void GameAI(int skip)
 			actor.Play(ONCE, (float) skip, FALSE, TRUE);
 			actor.frame++;
 
-			if (actor.frame == 15){
+			if (actor.frame == 5){
 				FnScene scene(sID);
+				scene.DeleteGameFXSystem(gFXID);
+				gFXID = FAILED_ID;
 					gFXID = scene.CreateGameFXSystem();
 					OBJECTid baseID = actor.GetBaseObject();
 					FnGameFXSystem gxS(gFXID);
+					gxS.Reset();
 					BOOL beOK = gxS.Load("Lyuatt2", TRUE);
 					gxS.SetParentObjectForAll(baseID);
 				aP.Load("att4.wav");
 				aP.Play(ONCE);
+
+				
+
 			}
 			if (actor.frame == 25)
 			{
@@ -1529,9 +1641,12 @@ void GameAI(int skip)
 
 			if (actor.frame == 2){
 				FnScene scene(sID);
+				scene.DeleteGameFXSystem(gFXID);
+				gFXID = FAILED_ID;
 				gFXID = scene.CreateGameFXSystem();
 				OBJECTid baseID = actor.GetBaseObject();
 				FnGameFXSystem gxS(gFXID);
+				gxS.Reset();
 				BOOL4 beOK = gxS.Load("Lyuatt3", TRUE);
 				gxS.SetParentObjectForAll(baseID);
 				aP.Load("att2.wav");
@@ -1649,6 +1764,15 @@ void GameAI(int skip)
 			{
 				aP.Load("hurt2.wav");
 				aP.Play(ONCE);
+				FnScene scene(sID);
+				scene.DeleteGameFXSystem(gFXID);
+				gFXID = FAILED_ID;
+				gFXID = scene.CreateGameFXSystem();
+				OBJECTid baseID = actor.GetBaseObject();
+				FnGameFXSystem gxS(gFXID);
+				gxS.Reset();
+				BOOL beOK = gxS.Load("Tower_atk01_e", TRUE);
+				gxS.SetParentObjectForAll(baseID);
 			}
 			if (actor.frame == 20)
 			{
@@ -1666,10 +1790,18 @@ void GameAI(int skip)
 		// die
 			actor.Play(ONCE, (float) skip, FALSE, TRUE);
 			actor.frame++;
-			if (actor.frame == 20)
+			if (actor.frame == 35)
 			{
 				aP.Load("adie.wav");
 				aP.Play(ONCE);
+				FnScene scene(sID);
+				scene.DeleteGameFXSystem(gFXID);
+				gFXID = FAILED_ID;
+				gFXID = scene.CreateGameFXSystem();
+				OBJECTid baseID = actor.GetBaseObject();
+				FnGameFXSystem gxS(gFXID);
+				BOOL beOK = gxS.Load("SpellHome_01", TRUE);
+				gxS.SetParentObjectForAll(baseID);
 			}
 			break;
 		default:
@@ -1679,27 +1811,7 @@ void GameAI(int skip)
 	actor.BB();
 
 
-	// play game FX
-		   if (gFXID != FAILED_ID) {
-			  FnGameFXSystem gxS(gFXID);
-			  BOOL4 beOK = gxS.Play((float) skip, ONCE);
-			  if (!beOK) {
-				 FnScene scene(sID);
-				 scene.DeleteGameFXSystem(gFXID);
-				 gFXID = FAILED_ID;
-			  }
-		   }
-
-					// play game FX
-		   if (dFXID != FAILED_ID) {
-			  FnGameFXSystem dxS(dFXID);
-			  BOOL4 beOK = dxS.Play((float) skip, ONCE);
-			  if (!beOK) {
-				 FnScene scene(sID);
-				 scene.DeleteGameFXSystem(dFXID);
-				 dFXID = FAILED_ID;
-			  }
-		   }
+	//playFX(skip);
 
 	actor.GetPosition(pos);
 	npca.GetPosition(npcapos);
@@ -2277,7 +2389,14 @@ void GameAI(int skip)
 			{
 				hP.Load("att3.wav");
 				hP.Play(ONCE);
-
+				FnScene scene(sID);
+				scene.DeleteGameFXSystem(dFXID);
+				dFXID = FAILED_ID;
+				dFXID = scene.CreateGameFXSystem();
+				OBJECTid baseID = npca.GetBaseObject();
+				FnGameFXSystem dxS(dFXID);
+				BOOL4 beOK = dxS.Load("SwordLight", TRUE);
+				dxS.SetParentObjectForAll(baseID);
 				if (npca.isFriend)
             {
                if (npca.state != DIE && !npca.isFriend)
@@ -2453,6 +2572,14 @@ void GameAI(int skip)
          {
             hP.Load("att3.wav");
             hP.Play(ONCE);
+			FnScene scene(sID);
+				scene.DeleteGameFXSystem(dFXID);
+				dFXID = FAILED_ID;
+				dFXID = scene.CreateGameFXSystem();
+				OBJECTid baseID = npca.GetBaseObject();
+				FnGameFXSystem dxS(dFXID);
+				BOOL4 beOK = dxS.Load("SwordLight", TRUE);
+				dxS.SetParentObjectForAll(baseID);
 
             if (npca.isFriend)
             {
@@ -2629,6 +2756,8 @@ void GameAI(int skip)
 				hP.Load("Dhurt1.wav");
 				hP.Play(ONCE);
 				FnScene scene(sID);
+				scene.DeleteGameFXSystem(dFXID);
+				dFXID = FAILED_ID;
 				dFXID = scene.CreateGameFXSystem();
 				OBJECTid baseID = npca.GetBaseObject();
 				FnGameFXSystem dxS(dFXID);
@@ -2652,6 +2781,14 @@ void GameAI(int skip)
 			{	
 				hP.Load("Ddie.wav");
 				hP.Play(ONCE);
+				FnScene scene(sID);
+				scene.DeleteGameFXSystem(dFXID);
+				dFXID = FAILED_ID;
+				dFXID = scene.CreateGameFXSystem();
+				OBJECTid baseID = npca.GetBaseObject();
+				FnGameFXSystem dxS(dFXID);
+				BOOL4 beOK = dxS.Load("DonzuHurt", TRUE);
+				dxS.SetParentObjectForAll(baseID);
 			}	
 			break;
 		default:
@@ -2659,7 +2796,7 @@ void GameAI(int skip)
 	}
 
 	npca.BB();
-
+	//playFX(skip);
 	/*------------------------------------------
 	 ||||    || |||||||||   ||||||||  |||||||||
 	 || ||   || ||      || ||      || ||      ||
@@ -3592,7 +3729,7 @@ void GameAI(int skip)
 	}
 
 	npcb.BB();
-
+	//playFX(skip);
 	/*------------------------------------------
 	 ||||    || |||||||||   ||||||||   ||||||||
 	 || ||   || ||      || ||      || ||      ||
@@ -5080,7 +5217,15 @@ if (npcd.state != DIE)
 			npcd.Play(ONCE, (float) skip, FALSE, TRUE);
 			npcd.frame++;
 			if (npcd.frame == 4)
-			{
+			{	
+				FnScene scene(sID);
+				scene.DeleteGameFXSystem(npcdFXID);
+				npcdFXID = FAILED_ID;
+				npcdFXID = scene.CreateGameFXSystem();
+				OBJECTid baseID = npcd.GetBaseObject();
+				FnGameFXSystem npcdxS(npcdFXID);
+				BOOL4 beOK = npcdxS.Load("NPCatt", TRUE);
+				npcdxS.SetParentObjectForAll(baseID);
 				hP2.Load("Matt1.wav");
 				hP2.Play(ONCE);
 			}
@@ -5256,10 +5401,18 @@ if (npcd.state != DIE)
 		// normal attack 2 31 frames
          npcd.Play(ONCE, (float) skip, FALSE, TRUE);
          npcd.frame++;
-		 if (npcd.frame == 0)
+		 if (npcd.frame == 2)
 			{
 				hP2.Load("Mhurt2.wav");
 				hP2.Play(ONCE);
+				FnScene scene(sID);
+				scene.DeleteGameFXSystem(npcdFXID);
+				npcdFXID = FAILED_ID;
+				npcdFXID = scene.CreateGameFXSystem();
+				OBJECTid baseID = npcd.GetBaseObject();
+				FnGameFXSystem npcdxS(npcdFXID);
+				BOOL4 beOK = npcdxS.Load("NPCatt", TRUE);
+				npcdxS.SetParentObjectForAll(baseID);
 			}
          if (npcd.frame == 17)
          {
@@ -5436,6 +5589,15 @@ if (npcd.state != DIE)
 				npcd.SetCurrentAction(NULL, 0, npcd.idleID);
 				hP2.Load("Mhurt.wav");
 				hP2.Play(ONCE);
+				FnScene scene(sID);
+				scene.DeleteGameFXSystem(npcdFXID);
+				npcdFXID = FAILED_ID;
+				npcdFXID = scene.CreateGameFXSystem();
+				OBJECTid baseID = npcd.GetBaseObject();
+				FnGameFXSystem npcdxS(npcdFXID);
+				npcdxS.Reset();
+				BOOL4 beOK = npcdxS.Load("DonzuHurt", TRUE);
+				npcdxS.SetParentObjectForAll(baseID);
 			}
 			npcd.Play(LOOP, (float) skip, FALSE, TRUE);
 			npcd.frame++;
@@ -5454,7 +5616,14 @@ if (npcd.state != DIE)
 				npcd.frame++;
 				if (npcd.frame == 4)
 				{
-
+					FnScene scene(sID);
+					scene.DeleteGameFXSystem(npcdFXID);
+					npcdFXID = FAILED_ID;
+					npcdFXID = scene.CreateGameFXSystem();
+					OBJECTid baseID = npcd.GetBaseObject();
+					FnGameFXSystem npcdxS(npcdFXID);
+					BOOL4 beOK = npcdxS.Load("SpellHome_01", TRUE);
+					npcdxS.SetParentObjectForAll(baseID);
 					hP2.Load("Mdie2.wav");
 					hP2.Play(ONCE);
 				}
@@ -5485,7 +5654,7 @@ if (npcd.state != DIE)
 	}
 
 	npcd.BB();
-
+	//playFX(skip);
 	/*------------------------------------------
 	 ||||    || |||||||||   ||||||||  ||||||||||
 	 || ||   || ||      || ||      || ||
@@ -6041,6 +6210,12 @@ if (npcd.state != DIE)
 			{
 				hP.Load("Matt.wav");
 				hP.Play(ONCE);
+				FnScene scene(sID);
+				npceFXID = scene.CreateGameFXSystem();
+				OBJECTid baseID = npce.GetBaseObject();
+				FnGameFXSystem npcexS(npceFXID);
+				BOOL4 beOK = npcexS.Load("NPCatt", TRUE);
+				npcexS.SetParentObjectForAll(baseID);
 			}
 			if (npce.frame == 17)
 			{
@@ -6215,7 +6390,14 @@ if (npcd.state != DIE)
          npce.Play(ONCE, (float) skip, FALSE, TRUE);
          npce.frame++;
 		if (npce.frame == 2)
-			{
+			{	FnScene scene(sID);
+				scene.DeleteGameFXSystem(npceFXID);
+				npceFXID = FAILED_ID;
+				npceFXID = scene.CreateGameFXSystem();
+				OBJECTid baseID = npce.GetBaseObject();
+				FnGameFXSystem npcexS(npceFXID);
+				BOOL4 beOK = npcexS.Load("npcAtt", TRUE);
+				npcexS.SetParentObjectForAll(baseID);
 				hP.Load("Matt1.wav");
 				hP.Play(ONCE);
 			}
@@ -6390,10 +6572,19 @@ if (npcd.state != DIE)
 		case DAMAGE:
 		// no damage
 			if (npce.frame == 0)
-			{
+			{	FnScene scene(sID);
+				scene.DeleteGameFXSystem(npceFXID);
+				npceFXID = FAILED_ID;
+				npceFXID = scene.CreateGameFXSystem();
+				OBJECTid baseID = npce.GetBaseObject();
+				FnGameFXSystem npcexS(npceFXID);
+				npcexS.Reset();
+				BOOL4 beOK = npcexS.Load("npceHurt", TRUE);
+				npcexS.SetParentObjectForAll(baseID);
 				npce.SetCurrentAction(NULL, 0, npce.idleID);
 				hP.Load("Mhurt.wav");
 				hP.Play(ONCE);
+
 			}
 			npce.Play(LOOP, (float) skip, FALSE, TRUE);
 			npce.frame++;
@@ -6412,7 +6603,14 @@ if (npcd.state != DIE)
 				npce.frame++;
 				if (npce.frame == 4)
 				{
-
+					FnScene scene(sID);
+					scene.DeleteGameFXSystem(npceFXID);
+					npceFXID = FAILED_ID;
+					npceFXID = scene.CreateGameFXSystem();
+					OBJECTid baseID = npce.GetBaseObject();
+					FnGameFXSystem npcexS(npceFXID);
+					BOOL4 beOK = npcexS.Load("Tower_atk01_e", TRUE);
+					npcexS.SetParentObjectForAll(baseID);
 					hP.Load("MDie.wav");
 					hP.Play(ONCE);
 				}
@@ -6443,7 +6641,7 @@ if (npcd.state != DIE)
 	}
 
 	npce.BB();
-
+	//playFX(skip);
 	/*------------------------------------------
 	 ||||    || |||||||||   ||||||||  ||||||||||
 	 || ||   || ||      || ||      || ||
@@ -6996,7 +7194,15 @@ if (npcd.state != DIE)
 			npcf.Play(ONCE, (float) skip, FALSE, TRUE);
 			npcf.frame++;
 			if (npcf.frame == 3)
-			{
+			{	
+				FnScene scene(sID);
+				scene.DeleteGameFXSystem(npcfFXID);
+				npcfFXID = FAILED_ID;
+				npcfFXID = scene.CreateGameFXSystem();
+				OBJECTid baseID = npcf.GetBaseObject();
+				FnGameFXSystem npcfxS(npcfFXID);
+				BOOL4 beOK = npcfxS.Load("CA002_atk01_e", TRUE);
+				npcfxS.SetParentObjectForAll(baseID);
 				hP.Load("Gatt.wav");
 				hP.Play(ONCE);
 			}
@@ -7176,6 +7382,14 @@ if (npcd.state != DIE)
 			{
 				hP.Load("Gatt2.wav");
 				hP.Play(ONCE);
+				FnScene scene(sID);
+				scene.DeleteGameFXSystem(npcfFXID);
+				npcfFXID = FAILED_ID;
+				npcfFXID = scene.CreateGameFXSystem();
+				OBJECTid baseID = npcf.GetBaseObject();
+				FnGameFXSystem npcfxS(npcfFXID);
+				BOOL4 beOK = npcfxS.Load("CA002_atk01_e", TRUE);
+				npcfxS.SetParentObjectForAll(baseID);
 			}
          if (npcf.frame == 17)
          {
@@ -7352,6 +7566,15 @@ if (npcd.state != DIE)
 				npcf.SetCurrentAction(NULL, 0, npcf.idleID);
 				hP.Load("Ghurt.wav");
 				hP.Play(ONCE);
+				FnScene scene(sID);
+				scene.DeleteGameFXSystem(npcfFXID);
+				npcfFXID = FAILED_ID;
+				npcfFXID = scene.CreateGameFXSystem();
+				OBJECTid baseID = npcf.GetBaseObject();
+				FnGameFXSystem npcfxS(npcfFXID);
+				npcfxS.Reset();
+				BOOL4 beOK = npcfxS.Load("Blow_01e", TRUE);
+				npcfxS.SetParentObjectForAll(baseID);
 			}
 			npcf.Play(LOOP, (float) skip, FALSE, TRUE);
 			npcf.frame++;
@@ -7371,6 +7594,14 @@ if (npcd.state != DIE)
 				if (npcf.frame == 4){
 					hP.Load("Gdie.wav");
 					hP.Play(ONCE);
+					FnScene scene(sID);
+					scene.DeleteGameFXSystem(npcfFXID);
+					npcfFXID = FAILED_ID;
+					npcfFXID = scene.CreateGameFXSystem();
+					OBJECTid baseID = npcf.GetBaseObject();
+					FnGameFXSystem npcfxS(npcfFXID);
+					BOOL4 beOK = npcfxS.Load("Blow_01e", TRUE);
+					npcfxS.SetParentObjectForAll(baseID);
 				}
 				npcf.frame++;
 				if (npcf.frame == 87)
@@ -7400,7 +7631,7 @@ if (npcd.state != DIE)
 	}
 
 	npcf.BB();
-
+	//playFX(skip);
 	/*------------------------------------------
 	 ||||    || |||||||||   ||||||||   ||||||||
 	 || ||   || ||      || ||      || ||
@@ -7956,6 +8187,14 @@ if (npcd.state != DIE)
 			{
 				hP.Load("Gatt3.wav");
 				hP.Play(ONCE);
+				FnScene scene(sID);
+				scene.DeleteGameFXSystem(npcgFXID);
+				npcgFXID = FAILED_ID;
+				npcgFXID = scene.CreateGameFXSystem();
+				OBJECTid baseID = npcg.GetBaseObject();
+				FnGameFXSystem npcgxS(npcgFXID);
+				BOOL4 beOK = npcgxS.Load("npcgAtt", TRUE);
+				npcgxS.SetParentObjectForAll(baseID);
 			}
 			if (npcg.frame == 17)
 			{
@@ -8133,6 +8372,14 @@ if (npcd.state != DIE)
 			{
 				hP.Load("Gatt2.wav");
 				hP.Play(ONCE);
+				FnScene scene(sID);
+				scene.DeleteGameFXSystem(npcgFXID);
+				npcgFXID = FAILED_ID;
+				npcgFXID = scene.CreateGameFXSystem();
+				OBJECTid baseID = npcg.GetBaseObject();
+				FnGameFXSystem npcgxS(npcgFXID);
+				BOOL4 beOK = npcgxS.Load("npcgAtt", TRUE);
+				npcgxS.SetParentObjectForAll(baseID);
 			}
          if (npcg.frame == 17)
          {
@@ -8309,6 +8556,15 @@ if (npcd.state != DIE)
 				npcg.SetCurrentAction(NULL, 0, npcg.idleID);
 				hP.Load("Ghurt2.wav");
 				hP.Play(ONCE);
+				FnScene scene(sID);
+				scene.DeleteGameFXSystem(npcgFXID);
+				npcgFXID = FAILED_ID;
+				npcgFXID = scene.CreateGameFXSystem();
+				OBJECTid baseID = npcg.GetBaseObject();
+				FnGameFXSystem npcgxS(npcgFXID);
+				npcgxS.Reset();
+				BOOL4 beOK = npcgxS.Load("DonzuHurt", TRUE);
+				npcgxS.SetParentObjectForAll(baseID);
 			}
 			npcg.Play(LOOP, (float) skip, FALSE, TRUE);
 			npcg.frame++;
@@ -8329,6 +8585,14 @@ if (npcd.state != DIE)
 				{
 					hP.Load("Gdie2.wav");
 					hP.Play(ONCE);
+					FnScene scene(sID);
+					scene.DeleteGameFXSystem(npcgFXID);
+					npcgFXID = FAILED_ID;
+					npcgFXID = scene.CreateGameFXSystem();
+					OBJECTid baseID = npcg.GetBaseObject();
+					FnGameFXSystem npcgxS(npcgFXID);
+					BOOL4 beOK = npcgxS.Load("Tower_atk01_e", TRUE);
+					npcgxS.SetParentObjectForAll(baseID);
 				}
 				if (npcg.frame == 60)
 				{
@@ -8359,40 +8623,7 @@ if (npcd.state != DIE)
 	npcg.BB();
 
 
-		// play game FX
-		   if (gFXID != FAILED_ID) {
-			  FnGameFXSystem gxS(gFXID);
-			  BOOL4 beOK = gxS.Play((float) skip, ONCE);
-			  if (!beOK) {
-				 FnScene scene(sID);
-				 scene.DeleteGameFXSystem(gFXID);
-				 gFXID = FAILED_ID;
-			  }
-		   }
-
-					// play game FX
-		   if (dFXID != FAILED_ID) {
-			  FnGameFXSystem dxS(dFXID);
-			  BOOL4 beOK = dxS.Play((float) skip, ONCE);
-			  if (!beOK) {
-				 FnScene scene(sID);
-				 scene.DeleteGameFXSystem(dFXID);
-				 dFXID = FAILED_ID;
-			  }
-		   }
-
-	/*
-		// play game FX
-		   if (gFXID != FAILED_ID) {
-			  FnGameFXSystem dxS(gFXID);
-			  BOOL4 beOK = dxS.Play((float) skip, ONCE);
-			  if (!beOK) {
-				 FnScene scene(sID);
-				 scene.DeleteGameFXSystem(gFXID);
-				 gFXID = FAILED_ID;
-			  }
-		   }
-*/
+	playFX(skip);
 
 	
 	//camera rotating
