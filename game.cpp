@@ -719,7 +719,7 @@ int nearestFriend(int myID, float *mypos)
    shortestDist = myDist(mypos, pos);
    result = ACTOR;
 
-   if (myID != NPCD && npcd.isFriend)
+   if (myID != NPCD && npcd.isFriend && npcd.state != DIE)
    {
       if (shortestDist > myDist(mypos, npcdpos))
       {
@@ -727,7 +727,7 @@ int nearestFriend(int myID, float *mypos)
          result = NPCD;
       }
    }
-   if (myID != NPCE && npce.isFriend)
+   if (myID != NPCE && npce.isFriend && npce.state != DIE)
    {
       if (shortestDist > myDist(mypos, npcepos))
       {
@@ -735,7 +735,7 @@ int nearestFriend(int myID, float *mypos)
          result = NPCE;
       }
    }
-   if (myID != NPCF && npcf.isFriend)
+   if (myID != NPCF && npcf.isFriend && npcf.state != DIE)
    {
       if (shortestDist > myDist(mypos, npcfpos))
       {
@@ -743,7 +743,7 @@ int nearestFriend(int myID, float *mypos)
          result = NPCF;
       }
    }
-   if (myID != NPCG && npcg.isFriend)
+   if (myID != NPCG && npcg.isFriend && npcg.state != DIE)
    {
       if (shortestDist > myDist(mypos, npcgpos))
       {
@@ -751,7 +751,7 @@ int nearestFriend(int myID, float *mypos)
          result = NPCG;
       }
    }
-   if (shortestDist > 1000.0f)
+   if (shortestDist > 500.0f)
    {
       result = NONE;
    }
@@ -775,17 +775,23 @@ int nearestEnemy(int myID, float *mypos)
 	shortestDist = myDist(mypos, npcapos);
 	result = NPCA;
 
-	if (shortestDist > myDist(mypos, npcbpos))
+	if (npcb.state != DIE)
 	{
-		shortestDist = myDist(mypos, npcbpos);
-		result = NPCB;
+		if (shortestDist > myDist(mypos, npcbpos))
+		{
+			shortestDist = myDist(mypos, npcbpos);
+			result = NPCB;
+		}
 	}
-	if (shortestDist > myDist(mypos, npccpos))
+	if (npcc.state != DIE)
 	{
-		shortestDist = myDist(mypos, npccpos);
-		result = NPCC;
+		if (shortestDist > myDist(mypos, npccpos))
+		{	
+			shortestDist = myDist(mypos, npccpos);
+			result = NPCC;
+		}
 	}
-	if (myID != NPCD && !npcd.isFriend)
+	if (myID != NPCD && !npcd.isFriend && npcd.state != DIE)
 	{
 		if (shortestDist > myDist(mypos, npcdpos))
 		{
@@ -793,7 +799,7 @@ int nearestEnemy(int myID, float *mypos)
 			result = NPCD;
 		}
 	}
-	if (myID != NPCE && !npce.isFriend)
+	if (myID != NPCE && !npce.isFriend && npce.state != DIE)
 	{
 		if (shortestDist > myDist(mypos, npcepos))
 		{
@@ -801,7 +807,7 @@ int nearestEnemy(int myID, float *mypos)
 			result = NPCE;
 		}
 	}
-	if (myID != NPCF && !npcf.isFriend)
+	if (myID != NPCF && !npcf.isFriend && npcf.state != DIE)
 	{
 		if (shortestDist > myDist(mypos, npcfpos))
 		{
@@ -809,7 +815,7 @@ int nearestEnemy(int myID, float *mypos)
 			result = NPCF;
 		}
 	}
-	if (myID != NPCG && !npcg.isFriend)
+	if (myID != NPCG && !npcg.isFriend && npcg.state != DIE)
 	{
 		if (shortestDist > myDist(mypos, npcgpos))
 		{
@@ -817,9 +823,13 @@ int nearestEnemy(int myID, float *mypos)
 			result = NPCG;
 		}
 	}
-	if (shortestDist > 1000.0f)
+	if (shortestDist > 600.0f)
 	{
       result = NONE;
+	}
+	if (result == NPCA && npca.state == DIE)
+	{
+		result = NONE;
 	}
 
 	return result;
@@ -4022,6 +4032,7 @@ void GameAI(int skip)
 			break;
 		case RUN:
 		// run
+			npcc.Play(LOOP, (float) skip, FALSE, TRUE);
 			switch(npcc.target)
          {
             case NONE:
