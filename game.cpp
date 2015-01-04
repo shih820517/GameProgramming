@@ -108,7 +108,12 @@ public:
 
 VIEWPORTid vID;                 // the major viewport
 SCENEid sID;                    // the 3D scene
+SCENEid sID2;					// the 2D scene
+
 OBJECTid cID, tID, oID;         // the main camera and the terrain for terrain following
+
+OBJECTid spID0 = FAILED_ID;		// this is a sprite id for UI
+
 CHARACTERid actorID; // the major character
 CHARACTERid npcaID, npcbID, npccID, npcdID, npceID, npcfID, npcgID;
 CHARACTERid bossID;
@@ -126,6 +131,7 @@ GAMEFX_SYSTEMid dFXID = FAILED_ID;
 AUDIOid mmID;//?Œæ™¯?³æ?
 AUDIOid atID;//?»æ??³æ?
 AUDIOid hurtID;//?—å‚·?³æ?
+AUDIOid pauseID;
 
 // some globals
 int frame = 0;
@@ -138,6 +144,8 @@ int oldX, oldY, oldXM, oldYM, oldXMM, oldYMM;
 3 RIGHT
 */
 bool moveKeyState[4] = {false, false, false, false};
+
+bool pause = false;
 
 /*
 0 normal attack
@@ -165,6 +173,7 @@ void NpcControl(BYTE, BOOL4);
 void Reset(BYTE, BOOL4);
 void cameraRotate(BYTE, BOOL4);
 void cameraZoom(BYTE, BOOL4);
+void PauseGame(BYTE, BOOL4);
 
 // timer callbacks
 void GameAI(int);
@@ -224,6 +233,9 @@ void FyMain(int argc, char **argv)
 	mP.Load("bk2.wav");
 	mP.Play(LOOP);
 
+
+	
+
 	// create a viewport
 	vID = FyCreateViewport(0, 0, 1024, 768);
 	FnViewport vp;
@@ -233,6 +245,21 @@ void FyMain(int argc, char **argv)
 	sID = FyCreateScene(10);
 	FnScene scene;
 	scene.ID(sID);
+
+	//create a 2D scene for UI
+	sID2 = FyCreateScene(1);
+	FnScene spritescene;
+	spritescene.Object(sID2);
+	spritescene.SetSpriteWorldSize(1024, 768);
+
+	//After create scene then create a sprite for user interface
+	FnSprite sp;
+
+	spID0 = spritescene.CreateObject(SPRITE);
+	sp.Object(spID0);
+	sp.SetSize(1024, 350);
+	sp.SetImage("lbj", 0, NULL, FALSE, NULL, 2, TRUE, FILTER_LINEAR);
+	sp.SetPosition(0, 256, 0);
 
 	// load the scene
 	scene.Load("gameScene01");
@@ -568,6 +595,8 @@ void FyMain(int argc, char **argv)
 	textID = FyCreateText("Trebuchet MS", 18, FALSE, FALSE);
 
 	// set Hotkeys
+	FyDefineHotKey(FY_TAB, PauseGame, FALSE);
+
 	FyDefineHotKey(FY_ESCAPE, QuitGame, FALSE);  // escape for quiting the game
 	FyDefineHotKey(FY_UP, Movement, FALSE);      // Up for moving forward
 	FyDefineHotKey(FY_RIGHT, Movement, FALSE);   // Right for turning right
@@ -963,6 +992,9 @@ bool moving()
  ----------------------------------------------------------------*/
 void GameAI(int skip)
 {
+	if(!pause){
+
+	
 	FnCamera camera;
 	FnObject object, terrain;
 
@@ -8288,6 +8320,7 @@ if (npcd.state != DIE)
 		cuDir[2] =  (-cfDir[0] * cuDir[0] - cfDir[1] * cuDir[1]) / cfDir[2];
 		camera.SetDirection(cfDir, cuDir);
 	}
+	}
 }
 
 void RenderIt(int skip)
@@ -8297,6 +8330,10 @@ void RenderIt(int skip)
 	// render the whole scene
 	vp.ID(vID);
 	vp.Render3D(cID, TRUE, TRUE);
+
+	if(pause){
+   		vp.RenderSprites(sID2, TRUE, TRUE);
+   	}
 
 	// get camera's data
 	FnCamera camera;
@@ -8521,6 +8558,28 @@ void QuitGame(BYTE code, BOOL4 value)
     	if (value) {
     	FyQuitFlyWin32();
     	}
+	}
+}
+
+void PauseGame(BYTE code, BOOL4 value){
+	if(value){
+		pauseID = FyCreateAudio();
+		FnAudio pauseP;
+		pauseP.Object(pauseID);
+		pauseP.Load("dominating.wav");
+		pauseP.Play(ONCE);
+
+		FnAudio mP;
+		mP.Object(mmID);
+		
+		if(pause) {
+			mP.Play(LOOP);
+			pause = false;
+		}
+		else{
+			mP.Pause();
+			pause = true;
+		}
 	}
 }
 
