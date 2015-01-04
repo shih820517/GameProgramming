@@ -1255,6 +1255,7 @@ void RenderIt(int skip)
    char cposS[256], cfDirS[256], cuDirS[256];
    char actorBloodS[256], npcaBloodS[256], npcbBloodS[256];
    char cameraRotateS[256], cameraDistanceS[256]; 
+   char pauseS[256];
 
    sprintf(cposS, "cpos: %8.3f %8.3f %8.3f", cpos[0], cpos[1], cpos[2]);
    sprintf(cfDirS, "cfacing: %8.3f %8.3f %8.3f", cfDir[0], cfDir[1], cfDir[2]);
@@ -1268,6 +1269,7 @@ void RenderIt(int skip)
    sprintf(npcbBloodS, "Npc B HP: %d / %d", npcb.blood, npcb.fullBlood);
    sprintf(cameraRotateS, "cameraRotate: %d", cameraRotateState);
    sprintf(cameraDistanceS, "cameraDistance: %8.3f", cameraDistance);
+   sprintf(pauseS, "pause: %d", pause);
 
    text.Write(cposS, 20, 35, 255, 255, 0);
    text.Write(cfDirS, 20, 50, 255, 255, 0);
@@ -1281,6 +1283,7 @@ void RenderIt(int skip)
    text.Write(npcbBloodS, 20, 170, 255, 255, 0);
    text.Write(cameraRotateS, 20, 185, 255, 255, 0);
    text.Write(cameraDistanceS, 20, 200, 255, 255, 0);
+   text.Write(pauseS, 20, 215, 255, 255, 0);
 
 
    text.End();
@@ -1458,10 +1461,13 @@ void QuitGame(BYTE code, BOOL4 value)
 }
 
 void PauseGame(BYTE code, BOOL4 value){
-	if(pause){
-		pause = false;
+	if(value){
+		if(pause){
+			pause = false;
+		}
+		else pause = true;
 	}
-	else pause = true;
+	
 	
 }
 
