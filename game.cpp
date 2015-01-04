@@ -83,6 +83,7 @@ public:
 		color[0] = 1.0f; color[3] = 1.0f; color[1] = 0.0f; color[2] = 0.0f;
 		bloodBarID = bb.Billboard(NULL, size, NULL, 0, color);
 	}
+
 	void BB(){
 		FnBillboard bb(bloodBarID);
 		float newSize[2];
@@ -105,10 +106,15 @@ public:
 
 VIEWPORTid vID;                 // the major viewport
 SCENEid sID;                    // the 3D scene
+SCENEid sID2;
 OBJECTid cID, tID, oID;         // the main camera and the terrain for terrain following
+
+OBJECTid spID0 = FAILED_ID;
+
 CHARACTERid actorID; // the major character
 CHARACTERid npcaID, npcbID, npccID, npcdID, npceID, npcfID, npcgID;
 CHARACTERid bossID;
+
 /* actor actions */
 ACTIONid idleID, runID, dieID, combatIdleID, guardID, curPoseID; // actor move & die
 ACTIONid normalAttack1ID, normalAttack2ID, normalAttack3ID, normalAttack4ID, ultimateAttackID; // actor normal attack
@@ -116,6 +122,7 @@ ACTIONid heavyDamagedID; // actor hurt
 
 ROOMid terrainRoomID = FAILED_ID;
 TEXTid textID = FAILED_ID;
+
 
 GEOMETRYid bloodBarID = FAILED_ID;//actor
 GEOMETRYid bloodBarNPC1ID = FAILED_ID;//npca
@@ -129,6 +136,7 @@ AUDIOid mmID;//?Œæ™¯?³æ?
 AUDIOid atID;//?»æ??³æ?
 AUDIOid hurtID;//?—å‚·?³æ?
 
+
 // some globals
 int frame = 0;
 int oldX, oldY, oldXM, oldYM, oldXMM, oldYMM;
@@ -140,6 +148,9 @@ int oldX, oldY, oldXM, oldYM, oldXMM, oldYMM;
 3 RIGHT
 */
 bool moveKeyState[4] = {false, false, false, false};
+
+
+bool pause = false;
 
 /*
 0 normal attack
@@ -167,6 +178,8 @@ void NpcControl(BYTE, BOOL4);
 void Reset(BYTE, BOOL4);
 void cameraRotate(BYTE, BOOL4);
 void cameraZoom(BYTE, BOOL4);
+void PauseGame(BYTE, BOOL4);
+
 
 // timer callbacks
 void GameAI(int);
@@ -527,9 +540,6 @@ void FyMain(int argc, char **argv)
 	
 	npcg.setBB(scene);
 
-
-
-
 	// create object
 	oID = scene.CreateObject(OBJECT);
 	FnObject object;
@@ -584,6 +594,8 @@ void FyMain(int argc, char **argv)
 
 	FyDefineHotKey(FY_3, cameraZoom, FALSE);
 	FyDefineHotKey(FY_4, cameraZoom, FALSE);
+
+	FyDefineHotKey(FY_ESCAPE, PauseGame, FALSE);
 
 	// define some mouse functions
 	FyBindMouseFunction(LEFT_MOUSE, InitPivot, PivotCam, NULL, NULL);
@@ -843,12 +855,14 @@ void GameAI(int skip)
 	FnCamera camera;
 	FnObject object, terrain;
 
+
 	FnAudio aP;
 	aP.Object(atID);
 
 	hurtID = FyCreateAudio();
 	FnAudio hP;
 	hP.Object(hurtID);
+
 
 	bool walk = false;
 	 
@@ -4561,6 +4575,7 @@ void GameAI(int skip)
 	}
 }
 
+
 void RenderIt(int skip)
 {
 	FnViewport vp;
@@ -4569,9 +4584,17 @@ void RenderIt(int skip)
 	vp.ID(vID);
 	vp.Render3D(cID, TRUE, TRUE);
 
+
+    if(pause){
+   		vp.RenderSprites(cID, TRUE, TRUE);
+    }
+   
+
+
 	// get camera's data
 	FnCamera camera;
 	camera.ID(cID);
+
 
 	FnObject object;
 	object.ID(oID);
@@ -4582,6 +4605,7 @@ void RenderIt(int skip)
 	camera.GetDirection(cfDir, cuDir);
 
  	actor.GetPosition(pos);
+
  	npca.GetPosition(npcapos);
  	npcb.GetPosition(npcbpos);
 
@@ -4602,6 +4626,7 @@ void RenderIt(int skip)
 	if (frame >= 1000) {
 		
 	}
+
 
 	FnText text;
 	text.ID(textID);
@@ -4782,17 +4807,16 @@ void Reset(BYTE code, BOOL4 value)
 	}
 }
 
-/*------------------
-  quit the demo
-  C.Wang 0327, 2005
- -------------------*/
-void QuitGame(BYTE code, BOOL4 value)
-{
-	if (code == FY_ESCAPE) {
-    	if (value) {
-    	FyQuitFlyWin32();
-    	}
+
+void PauseGame(BYTE code, BOOL4 value){
+	if(value){
+		if(pause){
+			pause = false;
+		}
+		else pause = true;
 	}
+	
+	
 }
 
 
