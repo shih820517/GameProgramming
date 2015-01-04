@@ -259,7 +259,7 @@ void FyMain(int argc, char **argv)
 	spID0 = spritescene.CreateObject(SPRITE);
 	sp.Object(spID0);
 	sp.SetSize(1024, 350);
-	sp.SetImage("lbj", 0, NULL, FALSE, NULL, 2, TRUE, FILTER_LINEAR);
+	sp.SetImage("chiou_head", 0, NULL, FALSE, NULL, 2, TRUE, FILTER_LINEAR);
 	sp.SetPosition(0, 256, 0);
 
 	// load the scene
