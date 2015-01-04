@@ -109,10 +109,13 @@ public:
 VIEWPORTid vID;                 // the major viewport
 SCENEid sID;                    // the 3D scene
 SCENEid sID2;					// the 2D scene
+SCENEid sID20;
 
 OBJECTid cID, tID, oID;         // the main camera and the terrain for terrain following
 
 OBJECTid spID0 = FAILED_ID;		// this is a sprite id for UI
+OBJECTid spID20 = FAILED_ID;     // the sprite for text
+OBJECTid spID21 = FAILED_ID;     // the sprite for text
 
 CHARACTERid actorID; // the major character
 CHARACTERid npcaID, npcbID, npccID, npcdID, npceID, npcfID, npcgID;
@@ -150,6 +153,8 @@ bool moveKeyState[4] = {false, false, false, false};
 bool welcome = true;
 bool pause = false;
 
+int welcomeMenu = 1;
+
 /*
 0 normal attack
 1 heavy attack
@@ -177,6 +182,9 @@ void Reset(BYTE, BOOL4);
 void cameraRotate(BYTE, BOOL4);
 void cameraZoom(BYTE, BOOL4);
 void PauseGame(BYTE, BOOL4);
+void selectMenu1(BYTE, BOOL4);
+void selectMenu2(BYTE, BOOL4);
+void enterMenu(BYTE, BOOL4);
 
 // timer callbacks
 void GameAI(int);
@@ -255,14 +263,38 @@ void FyMain(int argc, char **argv)
 	spritescene.Object(sID2);
 	spritescene.SetSpriteWorldSize(1024, 768);
 
+	sID20 = FyCreateScene(10);
+	FnScene spritescene20;
+	spritescene20.Object(sID20);
+	spritescene20.SetSpriteWorldSize(1024, 768);
+
 	//After create scene then create a sprite for user interface
 	FnSprite sp;
+	FnSpriteText sp20;
 
 	spID0 = spritescene.CreateObject(SPRITE);
 	sp.Object(spID0);
 	sp.SetSize(1024, 350);
 	sp.SetImage("lbj", 0, NULL, FALSE, NULL, 2, TRUE, FILTER_LINEAR);
 	sp.SetPosition(0, 256, 0);
+
+	spID20 = spritescene20.CreateObject(SPRITE);
+	sp20.Object(spID20);
+	char startText[256], exitText[256];
+	sprintf(startText, "START");
+	sprintf(exitText, "EXIT");
+	sp20.UseFont("Times New Roman", 30, FALSE, FALSE, FALSE);
+	sp20.Begin();
+	sp20.Write(0, 0, startText, 255, 255, 0);
+	sp20.Write(0, 30, exitText, 255, 255, 0);
+	sp20.End();
+	sp20.SetPosition(450, 400, 0);
+
+	spID21 = spritescene20.CreateObject(SPRITE);
+	sp20.Object(spID21);
+	sp20.SetSize(30, 30);
+	sp20.SetImage("arrow", 0, NULL, FALSE, NULL, 2, TRUE, FILTER_LINEAR);
+	sp20.SetPosition(410, 470, 0);
 
 	// load the scene
 	scene.Load("gameScene01");
