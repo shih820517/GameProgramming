@@ -128,9 +128,10 @@ TEXTid textID = FAILED_ID;
 GAMEFX_SYSTEMid gFXID = FAILED_ID;
 GAMEFX_SYSTEMid dFXID = FAILED_ID;
 
-AUDIOid mmID;//?Œæ™¯?³æ?
-AUDIOid atID;//?»æ??³æ?
-AUDIOid hurtID;//?—å‚·?³æ?
+AUDIOid mmID;//bkground
+AUDIOid atID;//actor
+AUDIOid npcID;//npcA
+AUDIOid npc2ID;//npcB
 AUDIOid pauseID;
 
 // some globals
@@ -997,13 +998,18 @@ void GameAI(int skip)
 	
 	FnCamera camera;
 	FnObject object, terrain;
-
+	atID = FyCreateAudio();
 	FnAudio aP;
 	aP.Object(atID);
 
-	hurtID = FyCreateAudio();
+	npcID = FyCreateAudio();
 	FnAudio hP;
-	hP.Object(hurtID);
+	hP.Object(npcID);
+
+
+	npc2ID = FyCreateAudio();
+	FnAudio hP2;
+	hP2.Object(npc2ID);
 
 	bool walk = false;
 	 
@@ -1023,7 +1029,7 @@ void GameAI(int skip)
 	camera.ID(cID);
 	terrain.ID(tID);	
 
-	FnGameFXSystem gxS(gFXID);//ä¸»è?
+	FnGameFXSystem gxS(gFXID);//actor
 	FnGameFXSystem dxS(dFXID); //Don
 
 	if(!attackKeyLocked){
@@ -1057,9 +1063,6 @@ void GameAI(int skip)
 					BOOL4 beOK = gxS.Load("Lyubu_skill01", TRUE);
 					gxS.SetParentObjectForAll(baseID);
 					
-					
-					aP.Load("att1.wav");
-					aP.Play(ONCE);
 
 					break;
 			}
@@ -1132,7 +1135,7 @@ void GameAI(int skip)
 		actor.SetCurrentAction(NULL, 0, dieID);
 		attackKeyLocked = true;
 		movementKeyLocked = true;
-
+				
 		//	gxS.Load("LyuDie", TRUE);
 		//	gxS.Play(skip, ONCE);
 	}
@@ -1190,7 +1193,9 @@ void GameAI(int skip)
 			actor.Play(ONCE, (float) skip, FALSE, TRUE);
 			actor.frame++;
 			if (actor.frame == 5)
-			{
+			{	
+				aP.Load("att1.wav");
+				aP.Play(ONCE);
 				if (npca.state != DIE && !npca.isFriend)
 				{
 					if(isHit(pos, npcapos, fDir, 180.0f, 40.0f))
@@ -1297,6 +1302,8 @@ void GameAI(int skip)
 					FnGameFXSystem gxS(gFXID);
 					BOOL beOK = gxS.Load("Lyuatt3", TRUE);
 					gxS.SetParentObjectForAll(baseID);
+					aP.Load("att3.wav");
+					aP.Play(ONCE);
 			}
 			if (actor.frame == 23)
 			{
@@ -1517,6 +1524,8 @@ void GameAI(int skip)
 				FnGameFXSystem gxS(gFXID);
 				BOOL4 beOK = gxS.Load("Lyuatt3", TRUE);
 				gxS.SetParentObjectForAll(baseID);
+				aP.Load("att2.wav");
+				aP.Play(ONCE);
 			}
 			if (actor.frame == 30)
 			{
@@ -1608,7 +1617,10 @@ void GameAI(int skip)
 		// ultimate attack 121 frames
 			actor.Play(ONCE, (float) skip, FALSE, TRUE);
 			actor.frame++;
-
+			if (actor.frame == 5)
+			{	aP.Load("att5.wav");
+				aP.Play(ONCE);
+			}
 			if (actor.frame == 120)
 			{
 				actor.state = COMBATIDLE;
@@ -1623,6 +1635,11 @@ void GameAI(int skip)
 		// heavy damage 24 frames
 			actor.Play(ONCE, (float) skip, FALSE, TRUE);
 			actor.frame++;
+			if (actor.frame == 2)
+			{
+				aP.Load("hurt2.wav");
+				aP.Play(ONCE);
+			}
 			if (actor.frame == 20)
 			{
 				attackKeyLocked = false;
@@ -1638,6 +1655,12 @@ void GameAI(int skip)
 		case DIE:
 		// die
 			actor.Play(ONCE, (float) skip, FALSE, TRUE);
+			actor.frame++;
+			if (actor.frame == 20)
+			{
+				aP.Load("adie.wav");
+				aP.Play(ONCE);
+			}
 			break;
 		default:
 			break;
@@ -2615,7 +2638,7 @@ void GameAI(int skip)
 			npca.Play(ONCE, (float) skip, FALSE, TRUE);
 			npca.frame++;
 
-			if (npca.frame == 90)
+			if (npca.frame == 95)
 			{	
 				hP.Load("Ddie.wav");
 				hP.Play(ONCE);
@@ -3179,7 +3202,11 @@ void GameAI(int skip)
 		// normal attack 1 36 frames
 			npcb.Play(ONCE, (float) skip, FALSE, TRUE);
 			npcb.frame++;
-
+			if (npcb.frame == 2)
+			{
+				hP2.Load("npcbAtt.wav");
+				hP2.Play(ONCE);
+			}
 			if (npcb.frame == 17)
 			{
 				if (npcb.isFriend)
@@ -3352,7 +3379,11 @@ void GameAI(int skip)
 		// normal attack 2 26 frames
          npcb.Play(ONCE, (float) skip, FALSE, TRUE);
          npcb.frame++;
-
+		if (npcb.frame == 2)
+			{
+				hP2.Load("npcbAtt.wav");
+				hP2.Play(ONCE);
+			}
          if (npcb.frame == 17)
          {
             if (npcb.isFriend)
@@ -3525,6 +3556,11 @@ void GameAI(int skip)
 		// damage1 16 frames
 			npcb.Play(ONCE, (float) skip, FALSE, TRUE);
 			npcb.frame++;
+			if (npcb.frame == 2)
+			{
+				hP2.Load("npcbHurt.wav");
+				hP2.Play(ONCE);
+			}
 			if (npcb.frame == 15)
 			{
 				npcb.state = IDLE;
@@ -3535,6 +3571,11 @@ void GameAI(int skip)
 		case DIE:
 		// die
 			npcb.Play(ONCE, (float) skip, FALSE, TRUE);
+			if (npcb.frame == 5)
+			{
+				hP2.Load("npcbDie.wav");
+				hP2.Play(ONCE);
+			}
 			break;
 		default:
 			break;
@@ -4092,7 +4133,11 @@ void GameAI(int skip)
 		// normal attack 1 36 frames
 			npcc.Play(ONCE, (float) skip, FALSE, TRUE);
 			npcc.frame++;
-
+			if (npcc.frame == 2)
+			{
+				hP2.Load("npcbAtt.wav");
+				hP2.Play(ONCE);
+			}
 			if (npcc.frame == 17)
 			{
 				if (npcc.isFriend)
@@ -4265,7 +4310,11 @@ void GameAI(int skip)
 		// normal attack 2 26 frames
          npcc.Play(ONCE, (float) skip, FALSE, TRUE);
          npcc.frame++;
-
+		if (npcc.frame == 2)
+			{
+				hP2.Load("npcbAtt.wav");
+				hP2.Play(ONCE);
+			}
          if (npcc.frame == 17)
          {
             if (npcc.isFriend)
@@ -4438,6 +4487,11 @@ void GameAI(int skip)
 		// damage1 16 frames
 			npcc.Play(ONCE, (float) skip, FALSE, TRUE);
 			npcc.frame++;
+			if (npcc.frame == 5)
+				{
+					hP.Load("npcbHurt.wav");
+					hP.Play(ONCE);
+				}
 			if (npcc.frame == 15)
 			{
 				npcc.state = IDLE;
@@ -4448,6 +4502,12 @@ void GameAI(int skip)
 		case DIE:
 		// die
 			npcc.Play(ONCE, (float) skip, FALSE, TRUE);
+			npcc.frame++;
+					if (npcc.frame == 5)
+				{
+					hP.Load("npcbDie.wav");
+					hP.Play(ONCE);
+				}
 			break;
 		default:
 			break;
@@ -5008,7 +5068,11 @@ if (npcd.state != DIE)
 		// normal attack 1 31 frames
 			npcd.Play(ONCE, (float) skip, FALSE, TRUE);
 			npcd.frame++;
-
+			if (npcd.frame == 4)
+			{
+				hP2.Load("Matt1.wav");
+				hP2.Play(ONCE);
+			}
 			if (npcd.frame == 17)
 			{
 				if (npcd.isFriend)
@@ -5181,7 +5245,11 @@ if (npcd.state != DIE)
 		// normal attack 2 31 frames
          npcd.Play(ONCE, (float) skip, FALSE, TRUE);
          npcd.frame++;
-
+		 if (npcd.frame == 0)
+			{
+				hP2.Load("Mhurt2.wav");
+				hP2.Play(ONCE);
+			}
          if (npcd.frame == 17)
          {
             if (npcd.isFriend)
@@ -5355,6 +5423,8 @@ if (npcd.state != DIE)
 			if (npcd.frame == 0)
 			{
 				npcd.SetCurrentAction(NULL, 0, npcd.idleID);
+				hP2.Load("Mhurt.wav");
+				hP2.Play(ONCE);
 			}
 			npcd.Play(LOOP, (float) skip, FALSE, TRUE);
 			npcd.frame++;
@@ -5371,6 +5441,12 @@ if (npcd.state != DIE)
 			if (!npcd.isFriend)
 			{
 				npcd.frame++;
+				if (npcd.frame == 4)
+				{
+
+					hP2.Load("Mdie2.wav");
+					hP2.Play(ONCE);
+				}
 				if (npcd.frame == 75)
 				{
 					if (teammateID[0] == NONE)
@@ -5950,7 +6026,11 @@ if (npcd.state != DIE)
 		// normal attack 1 33 frames
 			npce.Play(ONCE, (float) skip, FALSE, TRUE);
 			npce.frame++;
-
+			if (npce.frame == 2)
+			{
+				hP.Load("Matt.wav");
+				hP.Play(ONCE);
+			}
 			if (npce.frame == 17)
 			{
 				if (npce.isFriend)
@@ -6123,7 +6203,11 @@ if (npcd.state != DIE)
 		// no attack2
          npce.Play(ONCE, (float) skip, FALSE, TRUE);
          npce.frame++;
-
+		if (npce.frame == 2)
+			{
+				hP.Load("Matt1.wav");
+				hP.Play(ONCE);
+			}
          if (npce.frame == 17)
          {
             if (npce.isFriend)
@@ -6297,6 +6381,8 @@ if (npcd.state != DIE)
 			if (npce.frame == 0)
 			{
 				npce.SetCurrentAction(NULL, 0, npce.idleID);
+				hP.Load("Mhurt.wav");
+				hP.Play(ONCE);
 			}
 			npce.Play(LOOP, (float) skip, FALSE, TRUE);
 			npce.frame++;
@@ -6313,6 +6399,12 @@ if (npcd.state != DIE)
 			if (!npce.isFriend)
 			{
 				npce.frame++;
+				if (npce.frame == 4)
+				{
+
+					hP.Load("MDie.wav");
+					hP.Play(ONCE);
+				}
 				if (npce.frame == 100)
 				{
 					if (teammateID[0] == NONE)
@@ -6892,7 +6984,11 @@ if (npcd.state != DIE)
 		// normal attack 1 35 frames
 			npcf.Play(ONCE, (float) skip, FALSE, TRUE);
 			npcf.frame++;
-
+			if (npcf.frame == 3)
+			{
+				hP.Load("Gatt.wav");
+				hP.Play(ONCE);
+			}
 			if (npcf.frame == 17)
 			{
 				if (npcf.isFriend)
@@ -7065,7 +7161,11 @@ if (npcd.state != DIE)
 		// normal attack 2 39 frames
          npcf.Play(ONCE, (float) skip, FALSE, TRUE);
          npcf.frame++;
-
+		 if (npcf.frame == 3)
+			{
+				hP.Load("Gatt2.wav");
+				hP.Play(ONCE);
+			}
          if (npcf.frame == 17)
          {
             if (npcf.isFriend)
@@ -7237,11 +7337,14 @@ if (npcd.state != DIE)
 		case DAMAGE:
 		// no damage
 			if (npcf.frame == 0)
-			{
+			{	
 				npcf.SetCurrentAction(NULL, 0, npcf.idleID);
+				hP.Load("Ghurt.wav");
+				hP.Play(ONCE);
 			}
 			npcf.Play(LOOP, (float) skip, FALSE, TRUE);
 			npcf.frame++;
+
 			if (npcf.frame == 25)
 			{
 				npcf.state = IDLE;
@@ -7254,6 +7357,10 @@ if (npcd.state != DIE)
 			npcf.Play(ONCE, (float) skip, FALSE, TRUE);
 			if (!npcf.isFriend)
 			{
+				if (npcf.frame == 4){
+					hP.Load("Gdie.wav");
+					hP.Play(ONCE);
+				}
 				npcf.frame++;
 				if (npcf.frame == 87)
 				{
@@ -7834,7 +7941,11 @@ if (npcd.state != DIE)
 		// normal attack 1 31 frames
 			npcg.Play(ONCE, (float) skip, FALSE, TRUE);
 			npcg.frame++;
-
+			if (npcg.frame == 1)
+			{
+				hP.Load("Gatt3.wav");
+				hP.Play(ONCE);
+			}
 			if (npcg.frame == 17)
 			{
 				if (npcg.isFriend)
@@ -8007,7 +8118,11 @@ if (npcd.state != DIE)
 		// normal attack 2 48 frames
          npcg.Play(ONCE, (float) skip, FALSE, TRUE);
          npcg.frame++;
-
+		 if (npcg.frame == 1)
+			{
+				hP.Load("Gatt2.wav");
+				hP.Play(ONCE);
+			}
          if (npcg.frame == 17)
          {
             if (npcg.isFriend)
@@ -8181,6 +8296,8 @@ if (npcd.state != DIE)
 			if (npcg.frame == 0)
 			{
 				npcg.SetCurrentAction(NULL, 0, npcg.idleID);
+				hP.Load("Ghurt2.wav");
+				hP.Play(ONCE);
 			}
 			npcg.Play(LOOP, (float) skip, FALSE, TRUE);
 			npcg.frame++;
@@ -8197,6 +8314,11 @@ if (npcd.state != DIE)
 			if (!npcg.isFriend)
 			{
 				npcg.frame++;
+				if (npcg.frame == 5)
+				{
+					hP.Load("Gdie2.wav");
+					hP.Play(ONCE);
+				}
 				if (npcg.frame == 60)
 				{
 					if (teammateID[0] == NONE)
