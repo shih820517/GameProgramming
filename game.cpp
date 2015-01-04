@@ -750,7 +750,7 @@ int nearestFriend(int myID, float *mypos)
          result = NPCG;
       }
    }
-   if (shortestDist > 1000.0f)
+   if (shortestDist > 500.0f)
    {
       result = NONE;
    }
@@ -816,7 +816,7 @@ int nearestEnemy(int myID, float *mypos)
 			result = NPCG;
 		}
 	}
-	if (shortestDist > 1000.0f)
+	if (shortestDist > 600.0f)
 	{
       result = NONE;
 	}
@@ -3981,6 +3981,7 @@ void GameAI(int skip)
 			break;
 		case RUN:
 		// run
+			npcc.Play(LOOP, (float) skip, FALSE, TRUE);
 			switch(npcc.target)
          {
             case NONE:
