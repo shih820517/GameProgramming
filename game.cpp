@@ -200,9 +200,7 @@ void Reset(BYTE, BOOL4);
 void cameraRotate(BYTE, BOOL4);
 void cameraZoom(BYTE, BOOL4);
 void PauseGame(BYTE, BOOL4);
-
 void PauseAction(BYTE, BOOL4);
-
 void selectMenu1(BYTE, BOOL4);
 void selectMenu2(BYTE, BOOL4);
 void enterMenu(BYTE, BOOL4);
@@ -273,15 +271,10 @@ void FyMain(int argc, char **argv)
 	mP.Load("bk2.wav");
 	mP.Play(LOOP);
 
-
-	
-
 	// create a viewport
 	vID = FyCreateViewport(0, 0, 1024, 768);
 	FnViewport vp;
 	vp.ID(vID);
-
-	
 
 	// create a 3D scene
 	sID = FyCreateScene(10);
@@ -309,15 +302,8 @@ void FyMain(int argc, char **argv)
 	//sp.SetImage("lbj", 0, NULL, FALSE, NULL, 2, FALSE, FILTER_LINEAR);
 	//sp.SetPosition(0, 256, 0);
 
-
-
-	
-
-
-
 	//init the en
 	enID = FyCreateAudio();
-
 
 	FnSprite sp;
 	FnSpriteText sp20;
@@ -340,7 +326,6 @@ void FyMain(int argc, char **argv)
 	sp20.SetImage("arrow", 0, NULL, FALSE, NULL, 2, TRUE, FILTER_LINEAR);
 	sp20.SetPosition(410, 470, 0);
 
-
 	// this is pause sprite
 	FnSprite sp1;
 	spID1 = spritescene.CreateObject(SPRITE);
@@ -358,7 +343,6 @@ void FyMain(int argc, char **argv)
 	sp2.SetPosition(490, 190, 0);
 	sp2.SetPosition(470, 282, 0);
 	sp2.SetPosition(450, 375, 0);
-
 
 	// load the scene
 	scene.Load("gameScene01");
@@ -652,9 +636,6 @@ void FyMain(int argc, char **argv)
 	npcg.Play(START, 0.0f, FALSE, TRUE);
 	
 	npcg.setBB(scene);
-
-
-
 
 	// create object
 	oID = scene.CreateObject(OBJECT);
