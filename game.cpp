@@ -224,11 +224,13 @@ void FyMain(int argc, char **argv)
    	FySetTexturePath("Data\\NTU5\\Scenes\\Textures");
    	FySetScenePath("Data\\NTU5\\Scenes");
    	FySetGameFXPath("Data\\NTU5\\GameFXFiles\\FX2");
-A
+
+   	//setup the music 
+	FySetAudioPath("Data\\NTU5\\sound");
 	mmID = FyCreateAudio();
 	FnAudio mP;
 	mP.Object(mmID);
-	mP.Load("bk2.wav");
+	mP.Load("bk2.wav");A
 	mP.Play(LOOP);
 
 
