@@ -230,7 +230,7 @@ void FyMain(int argc, char **argv)
 	mmID = FyCreateAudio();
 	FnAudio mP;
 	mP.Object(mmID);
-	mP.Load("bk2.wav");A
+	mP.Load("bk2.wav");
 	mP.Play(LOOP);
 
 
