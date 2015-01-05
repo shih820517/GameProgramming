@@ -2138,7 +2138,7 @@ void GameAI(int skip)
 	                  npca.SetDirection(npcafDir, npcauDir);
 	                  if (npca.wait1 % 50 == 0)
 	                  {
-	                     npca.wait1++;
+	                     npca.wait2++;
 	                     if (npca.wait2 % 2 == 0)
 	                     {
 	                        npca.state = ATTACK2;
@@ -2169,7 +2169,7 @@ void GameAI(int skip)
 	                  npca.SetDirection(npcafDir, npcauDir);
 	                  if (npca.wait1 % 50 == 0)
 	                  {
-	                     npca.wait1++;
+	                     npca.wait2++;
 	                     if (npca.wait2 % 2 == 0)
 	                     {
 	                        npca.state = ATTACK2;
@@ -2200,7 +2200,7 @@ void GameAI(int skip)
 	                  npca.SetDirection(npcafDir, npcauDir);
 	                  if (npca.wait1 % 50 == 0)
 	                  {
-	                     npca.wait1++;
+	                     npca.wait2++;
 	                     if (npca.wait2 % 2 == 0)
 	                     {
 	                        npca.state = ATTACK2;
@@ -2231,7 +2231,7 @@ void GameAI(int skip)
 	                  npca.SetDirection(npcafDir, npcauDir);
 	                  if (npca.wait1 % 50 == 0)
 	                  {
-	                     npca.wait1++;
+	                     npca.wait2++;
 	                     if (npca.wait2 % 2 == 0)
 	                     {
 	                        npca.state = ATTACK2;
@@ -2262,7 +2262,7 @@ void GameAI(int skip)
 	                  npca.SetDirection(npcafDir, npcauDir);
 	                  if (npca.wait1 % 50 == 0)
 	                  {
-	                     npca.wait1++;
+	                     npca.wait2++;
 	                     if (npca.wait2 % 2 == 0)
 	                     {
 	                        npca.state = ATTACK2;
@@ -2293,7 +2293,7 @@ void GameAI(int skip)
 	                  npca.SetDirection(npcafDir, npcauDir);
 	                  if (npca.wait1 % 50 == 0)
 	                  {
-	                     npca.wait1++;
+	                     npca.wait2++;
 	                     if (npca.wait2 % 2 == 0)
 	                     {
 	                        npca.state = ATTACK2;
@@ -2324,7 +2324,7 @@ void GameAI(int skip)
 	                  npca.SetDirection(npcafDir, npcauDir);
 	                  if (npca.wait1 % 50 == 0)
 	                  {
-	                     npca.wait1++;
+	                     npca.wait2++;
 	                     if (npca.wait2 % 2 == 0)
 	                     {
 	                        npca.state = ATTACK2;
@@ -3103,7 +3103,7 @@ void GameAI(int skip)
 	                  npcb.SetDirection(npcbfDir, npcbuDir);
 	                  if (npcb.wait1 % 50 == 0)
 	                  {
-	                     npcb.wait1++;
+	                     npcb.wait2++;
 	                     if (npcb.wait2 % 2 == 0)
 	                     {
 	                        npcb.state = ATTACK2;
@@ -3134,7 +3134,7 @@ void GameAI(int skip)
 	                  npcb.SetDirection(npcbfDir, npcbuDir);
 	                  if (npcb.wait1 % 50 == 0)
 	                  {
-	                     npcb.wait1++;
+	                     npcb.wait2++;
 	                     if (npcb.wait2 % 2 == 0)
 	                     {
 	                        npcb.state = ATTACK2;
@@ -3165,7 +3165,7 @@ void GameAI(int skip)
 	                  npcb.SetDirection(npcbfDir, npcbuDir);
 	                  if (npcb.wait1 % 50 == 0)
 	                  {
-	                     npcb.wait1++;
+	                     npcb.wait2++;
 	                     if (npcb.wait2 % 2 == 0)
 	                     {
 	                        npcb.state = ATTACK2;
@@ -3196,7 +3196,7 @@ void GameAI(int skip)
 	                  npcb.SetDirection(npcbfDir, npcbuDir);
 	                  if (npcb.wait1 % 50 == 0)
 	                  {
-	                     npcb.wait1++;
+	                     npcb.wait2++;
 	                     if (npcb.wait2 % 2 == 0)
 	                     {
 	                        npcb.state = ATTACK2;
@@ -3227,7 +3227,7 @@ void GameAI(int skip)
 	                  npcb.SetDirection(npcbfDir, npcbuDir);
 	                  if (npcb.wait1 % 50 == 0)
 	                  {
-	                     npcb.wait1++;
+	                     npcb.wait2++;
 	                     if (npcb.wait2 % 2 == 0)
 	                     {
 	                        npcb.state = ATTACK2;
@@ -3258,7 +3258,7 @@ void GameAI(int skip)
 	                  npcb.SetDirection(npcbfDir, npcbuDir);
 	                  if (npcb.wait1 % 50 == 0)
 	                  {
-	                     npcb.wait1++;
+	                     npcb.wait2++;
 	                     if (npcb.wait2 % 2 == 0)
 	                     {
 	                        npcb.state = ATTACK2;
@@ -3289,7 +3289,7 @@ void GameAI(int skip)
 	                  npcb.SetDirection(npcbfDir, npcbuDir);
 	                  if (npcb.wait1 % 50 == 0)
 	                  {
-	                     npcb.wait1++;
+	                     npcb.wait2++;
 	                     if (npcb.wait2 % 2 == 0)
 	                     {
 	                        npcb.state = ATTACK2;
@@ -4036,7 +4036,7 @@ void GameAI(int skip)
 	                  npcc.SetDirection(npccfDir, npccuDir);
 	                  if (npcc.wait1 % 50 == 0)
 	                  {
-	                     npcc.wait1++;
+	                     npcc.wait2++;
 	                     if (npcc.wait2 % 2 == 0)
 	                     {
 	                        npcc.state = ATTACK2;
@@ -4067,7 +4067,7 @@ void GameAI(int skip)
 	                  npcc.SetDirection(npccfDir, npccuDir);
 	                  if (npcc.wait1 % 50 == 0)
 	                  {
-	                     npcc.wait1++;
+	                     npcc.wait2++;
 	                     if (npcc.wait2 % 2 == 0)
 	                     {
 	                        npcc.state = ATTACK2;
@@ -4098,7 +4098,7 @@ void GameAI(int skip)
 	                  npcc.SetDirection(npccfDir, npccuDir);
 	                  if (npcc.wait1 % 50 == 0)
 	                  {
-	                     npcc.wait1++;
+	                     npcc.wait2++;
 	                     if (npcc.wait2 % 2 == 0)
 	                     {
 	                        npcc.state = ATTACK2;
@@ -4129,7 +4129,7 @@ void GameAI(int skip)
 	                  npcc.SetDirection(npccfDir, npccuDir);
 	                  if (npcc.wait1 % 50 == 0)
 	                  {
-	                     npcc.wait1++;
+	                     npcc.wait2++;
 	                     if (npcc.wait2 % 2 == 0)
 	                     {
 	                        npcc.state = ATTACK2;
@@ -4160,7 +4160,7 @@ void GameAI(int skip)
 	                  npcc.SetDirection(npccfDir, npccuDir);
 	                  if (npcc.wait1 % 50 == 0)
 	                  {
-	                     npcc.wait1++;
+	                     npcc.wait2++;
 	                     if (npcc.wait2 % 2 == 0)
 	                     {
 	                        npcc.state = ATTACK2;
@@ -4191,7 +4191,7 @@ void GameAI(int skip)
 	                  npcc.SetDirection(npccfDir, npccuDir);
 	                  if (npcc.wait1 % 50 == 0)
 	                  {
-	                     npcc.wait1++;
+	                     npcc.wait2++;
 	                     if (npcc.wait2 % 2 == 0)
 	                     {
 	                        npcc.state = ATTACK2;
@@ -4222,7 +4222,7 @@ void GameAI(int skip)
 	                  npcc.SetDirection(npccfDir, npccuDir);
 	                  if (npcc.wait1 % 50 == 0)
 	                  {
-	                     npcc.wait1++;
+	                     npcc.wait2++;
 	                     if (npcc.wait2 % 2 == 0)
 	                     {
 	                        npcc.state = ATTACK2;
@@ -4970,7 +4970,7 @@ void GameAI(int skip)
 	                  npcd.SetDirection(npcdfDir, npcduDir);
 	                  if (npcd.wait1 % 50 == 0)
 	                  {
-	                     npcd.wait1++;
+	                     npcd.wait2++;
 	                     if (npcd.wait2 % 2 == 0)
 	                     {
 	                        npcd.state = ATTACK2;
@@ -5001,7 +5001,7 @@ void GameAI(int skip)
 	                  npcd.SetDirection(npcdfDir, npcduDir);
 	                  if (npcd.wait1 % 50 == 0)
 	                  {
-	                     npcd.wait1++;
+	                     npcd.wait2++;
 	                     if (npcd.wait2 % 2 == 0)
 	                     {
 	                        npcd.state = ATTACK2;
@@ -5032,7 +5032,7 @@ void GameAI(int skip)
 	                  npcd.SetDirection(npcdfDir, npcduDir);
 	                  if (npcd.wait1 % 50 == 0)
 	                  {
-	                     npcd.wait1++;
+	                     npcd.wait2++;
 	                     if (npcd.wait2 % 2 == 0)
 	                     {
 	                        npcd.state = ATTACK2;
@@ -5063,7 +5063,7 @@ void GameAI(int skip)
 	                  npcd.SetDirection(npcdfDir, npcduDir);
 	                  if (npcd.wait1 % 50 == 0)
 	                  {
-	                     npcd.wait1++;
+	                     npcd.wait2++;
 	                     if (npcd.wait2 % 2 == 0)
 	                     {
 	                        npcd.state = ATTACK2;
@@ -5094,7 +5094,7 @@ void GameAI(int skip)
 	                  npcd.SetDirection(npcdfDir, npcduDir);
 	                  if (npcd.wait1 % 50 == 0)
 	                  {
-	                     npcd.wait1++;
+	                     npcd.wait2++;
 	                     if (npcd.wait2 % 2 == 0)
 	                     {
 	                        npcd.state = ATTACK2;
@@ -5125,7 +5125,7 @@ void GameAI(int skip)
 	                  npcd.SetDirection(npcdfDir, npcduDir);
 	                  if (npcd.wait1 % 50 == 0)
 	                  {
-	                     npcd.wait1++;
+	                     npcd.wait2++;
 	                     if (npcd.wait2 % 2 == 0)
 	                     {
 	                        npcd.state = ATTACK2;
@@ -5156,7 +5156,7 @@ void GameAI(int skip)
 	                  npcd.SetDirection(npcdfDir, npcduDir);
 	                  if (npcd.wait1 % 50 == 0)
 	                  {
-	                     npcd.wait1++;
+	                     npcd.wait2++;
 	                     if (npcd.wait2 % 2 == 0)
 	                     {
 	                        npcd.state = ATTACK2;
@@ -5659,9 +5659,14 @@ void GameAI(int skip)
 				break;
 			case DAMAGE:
 			// no damage
-				if (npcd.frame == 2)
+				if (npcd.frame == 0)
 				{
 					npcd.SetCurrentAction(NULL, 0, npcd.idleID);
+				}
+				npcd.Play(LOOP, (float) skip, FALSE, TRUE);
+				npcd.frame++;
+				if (npcd.frame == 2)
+				{
 					hP2.Load("Mhurt.wav");
 					hP2.Play(ONCE);
 					FnScene scene(sID);
@@ -5674,8 +5679,6 @@ void GameAI(int skip)
 					BOOL4 beOK = npcdxS.Load("DonzuHurt", TRUE);
 					npcdxS.SetParentObjectForAll(baseID);
 				}
-				npcd.Play(LOOP, (float) skip, FALSE, TRUE);
-				npcd.frame++;
 				if (npcd.frame == 15)
 				{
 					npcd.state = IDLE;
@@ -5961,7 +5964,7 @@ void GameAI(int skip)
 	                  npce.SetDirection(npcefDir, npceuDir);
 	                  if (npce.wait1 % 50 == 0)
 	                  {
-	                     npce.wait1++;
+	                     npce.wait2++;
 	                     if (npce.wait2 % 2 == 0)
 	                     {
 	                        npce.state = ATTACK2;
@@ -5992,7 +5995,7 @@ void GameAI(int skip)
 	                  npce.SetDirection(npcefDir, npceuDir);
 	                  if (npce.wait1 % 50 == 0)
 	                  {
-	                     npce.wait1++;
+	                     npce.wait2++;
 	                     if (npce.wait2 % 2 == 0)
 	                     {
 	                        npce.state = ATTACK2;
@@ -6023,7 +6026,7 @@ void GameAI(int skip)
 	                  npce.SetDirection(npcefDir, npceuDir);
 	                  if (npce.wait1 % 50 == 0)
 	                  {
-	                     npce.wait1++;
+	                     npce.wait2++;
 	                     if (npce.wait2 % 2 == 0)
 	                     {
 	                        npce.state = ATTACK2;
@@ -6054,7 +6057,7 @@ void GameAI(int skip)
 	                  npce.SetDirection(npcefDir, npceuDir);
 	                  if (npce.wait1 % 50 == 0)
 	                  {
-	                     npce.wait1++;
+	                     npce.wait2++;
 	                     if (npce.wait2 % 2 == 0)
 	                     {
 	                        npce.state = ATTACK2;
@@ -6085,7 +6088,7 @@ void GameAI(int skip)
 	                  npce.SetDirection(npcefDir, npceuDir);
 	                  if (npce.wait1 % 50 == 0)
 	                  {
-	                     npce.wait1++;
+	                     npce.wait2++;
 	                     if (npce.wait2 % 2 == 0)
 	                     {
 	                        npce.state = ATTACK2;
@@ -6116,7 +6119,7 @@ void GameAI(int skip)
 	                  npce.SetDirection(npcefDir, npceuDir);
 	                  if (npce.wait1 % 50 == 0)
 	                  {
-	                     npce.wait1++;
+	                     npce.wait2++;
 	                     if (npce.wait2 % 2 == 0)
 	                     {
 	                        npce.state = ATTACK2;
@@ -6147,7 +6150,7 @@ void GameAI(int skip)
 	                  npce.SetDirection(npcefDir, npceuDir);
 	                  if (npce.wait1 % 50 == 0)
 	                  {
-	                     npce.wait1++;
+	                     npce.wait2++;
 	                     if (npce.wait2 % 2 == 0)
 	                     {
 	                        npce.state = ATTACK2;
@@ -6947,7 +6950,7 @@ void GameAI(int skip)
 	                  npcf.SetDirection(npcffDir, npcfuDir);
 	                  if (npcf.wait1 % 50 == 0)
 	                  {
-	                     npcf.wait1++;
+	                     npcf.wait2++;
 	                     if (npcf.wait2 % 2 == 0)
 	                     {
 	                        npcf.state = ATTACK2;
@@ -6978,7 +6981,7 @@ void GameAI(int skip)
 	                  npcf.SetDirection(npcffDir, npcfuDir);
 	                  if (npcf.wait1 % 50 == 0)
 	                  {
-	                     npcf.wait1++;
+	                     npcf.wait2++;
 	                     if (npcf.wait2 % 2 == 0)
 	                     {
 	                        npcf.state = ATTACK2;
@@ -7009,7 +7012,7 @@ void GameAI(int skip)
 	                  npcf.SetDirection(npcffDir, npcfuDir);
 	                  if (npcf.wait1 % 50 == 0)
 	                  {
-	                     npcf.wait1++;
+	                     npcf.wait2++;
 	                     if (npcf.wait2 % 2 == 0)
 	                     {
 	                        npcf.state = ATTACK2;
@@ -7040,7 +7043,7 @@ void GameAI(int skip)
 	                  npcf.SetDirection(npcffDir, npcfuDir);
 	                  if (npcf.wait1 % 50 == 0)
 	                  {
-	                     npcf.wait1++;
+	                     npcf.wait2++;
 	                     if (npcf.wait2 % 2 == 0)
 	                     {
 	                        npcf.state = ATTACK2;
@@ -7071,7 +7074,7 @@ void GameAI(int skip)
 	                  npcf.SetDirection(npcffDir, npcfuDir);
 	                  if (npcf.wait1 % 50 == 0)
 	                  {
-	                     npcf.wait1++;
+	                     npcf.wait2++;
 	                     if (npcf.wait2 % 2 == 0)
 	                     {
 	                        npcf.state = ATTACK2;
@@ -7102,7 +7105,7 @@ void GameAI(int skip)
 	                  npcf.SetDirection(npcffDir, npcfuDir);
 	                  if (npcf.wait1 % 50 == 0)
 	                  {
-	                     npcf.wait1++;
+	                     npcf.wait2++;
 	                     if (npcf.wait2 % 2 == 0)
 	                     {
 	                        npcf.state = ATTACK2;
@@ -7133,7 +7136,7 @@ void GameAI(int skip)
 	                  npcf.SetDirection(npcffDir, npcfuDir);
 	                  if (npcf.wait1 % 50 == 0)
 	                  {
-	                     npcf.wait1++;
+	                     npcf.wait2++;
 	                     if (npcf.wait2 % 2 == 0)
 	                     {
 	                        npcf.state = ATTACK2;
@@ -7937,7 +7940,7 @@ void GameAI(int skip)
 	                  npcg.SetDirection(npcgfDir, npcguDir);
 	                  if (npcg.wait1 % 50 == 0)
 	                  {
-	                     npcg.wait1++;
+	                     npcg.wait2++;
 	                     if (npcg.wait2 % 2 == 0)
 	                     {
 	                        npcg.state = ATTACK2;
@@ -7968,7 +7971,7 @@ void GameAI(int skip)
 	                  npcg.SetDirection(npcgfDir, npcguDir);
 	                  if (npcg.wait1 % 50 == 0)
 	                  {
-	                     npcg.wait1++;
+	                     npcg.wait2++;
 	                     if (npcg.wait2 % 2 == 0)
 	                     {
 	                        npcg.state = ATTACK2;
@@ -7999,7 +8002,7 @@ void GameAI(int skip)
 	                  npcg.SetDirection(npcgfDir, npcguDir);
 	                  if (npcg.wait1 % 50 == 0)
 	                  {
-	                     npcg.wait1++;
+	                     npcg.wait2++;
 	                     if (npcg.wait2 % 2 == 0)
 	                     {
 	                        npcg.state = ATTACK2;
@@ -8030,7 +8033,7 @@ void GameAI(int skip)
 	                  npcg.SetDirection(npcgfDir, npcguDir);
 	                  if (npcg.wait1 % 50 == 0)
 	                  {
-	                     npcg.wait1++;
+	                     npcg.wait2++;
 	                     if (npcg.wait2 % 2 == 0)
 	                     {
 	                        npcg.state = ATTACK2;
@@ -8061,7 +8064,7 @@ void GameAI(int skip)
 	                  npcg.SetDirection(npcgfDir, npcguDir);
 	                  if (npcg.wait1 % 50 == 0)
 	                  {
-	                     npcg.wait1++;
+	                     npcg.wait2++;
 	                     if (npcg.wait2 % 2 == 0)
 	                     {
 	                        npcg.state = ATTACK2;
@@ -8092,7 +8095,7 @@ void GameAI(int skip)
 	                  npcg.SetDirection(npcgfDir, npcguDir);
 	                  if (npcg.wait1 % 50 == 0)
 	                  {
-	                     npcg.wait1++;
+	                     npcg.wait2++;
 	                     if (npcg.wait2 % 2 == 0)
 	                     {
 	                        npcg.state = ATTACK2;
@@ -8123,7 +8126,7 @@ void GameAI(int skip)
 	                  npcg.SetDirection(npcgfDir, npcguDir);
 	                  if (npcg.wait1 % 50 == 0)
 	                  {
-	                     npcg.wait1++;
+	                     npcg.wait2++;
 	                     if (npcg.wait2 % 2 == 0)
 	                     {
 	                        npcg.state = ATTACK2;
