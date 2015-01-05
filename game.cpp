@@ -110,6 +110,8 @@ VIEWPORTid vID;                 // the major viewport
 SCENEid sID;                    // the 3D scene
 SCENEid sID2;					// the 2D scene
 SCENEid sID20;
+SCENEid sID30;
+SCENEid sID40;
 
 OBJECTid cID, tID, oID;         // the main camera and the terrain for terrain following
 
@@ -121,7 +123,12 @@ OBJECTid spID3 = FAILED_ID;
 
 OBJECTid spID20 = FAILED_ID;     // the sprite for text
 OBJECTid spID21 = FAILED_ID;     // the sprite for text
+OBJECTid spID22 = FAILED_ID;  
 
+OBJECTid spID30 = FAILED_ID;
+OBJECTid spID31 = FAILED_ID;	
+
+OBJECTid spID40 = FAILED_ID;
 
 CHARACTERid actorID; // the major character
 CHARACTERid npcaID, npcbID, npccID, npcdID, npceID, npcfID, npcgID;
@@ -163,7 +170,7 @@ int oldX, oldY, oldXM, oldYM, oldXMM, oldYMM;
 */
 bool moveKeyState[4] = {false, false, false, false};
 
-
+bool changeTeammate = false;
 bool welcome = true;
 bool pause = false;
 
@@ -172,12 +179,16 @@ int pausePointer = 0;
 
 const int pausePos[4][2] = {{450, 375},{470, 282},{490, 190},{510, 93}};
 
+int changePos[3] = {440, 410, 380};
+
 bool bkmusic = true;
 bool enmusic = false;
 
+bool winGame = false;
 
 int welcomeMenu = 1;
 
+int changeMenu = 1;
 
 /*
 0 normal attack
@@ -189,7 +200,7 @@ bool attackKeyLocked = false;
 bool movementKeyLocked = false;
 bool normalCombo = false;
 bool isFollow[2] = {true, true};
-int teammateID[2] = {NONE, NONE};
+int teammateID[3] = {NONE, NONE, NONE};
 
 int cameraRotateState = 0;
 
@@ -210,6 +221,7 @@ void PauseAction(BYTE, BOOL4);
 void selectMenu1(BYTE, BOOL4);
 void selectMenu2(BYTE, BOOL4);
 void enterMenu(BYTE, BOOL4);
+void ChangeAction(BYTE code, BOOL4 value);
 
 
 // timer callbacks
@@ -294,10 +306,20 @@ void FyMain(int argc, char **argv)
 	spritescene.ID(sID2);
 	spritescene.SetSpriteWorldSize(1024, 768);
 
-	sID20 = FyCreateScene(10);
+	sID20 = FyCreateScene(1);
 	FnScene spritescene20;
 	spritescene20.Object(sID20);
 	spritescene20.SetSpriteWorldSize(1024, 768);
+
+	sID30 = FyCreateScene(1);
+	FnScene spritescene30;
+	spritescene30.Object(sID30);
+	spritescene30.SetSpriteWorldSize(1024, 768);
+
+	sID40 = FyCreateScene(1);
+	FnScene spritescene40;
+	spritescene40.Object(sID40);
+	spritescene40.SetSpriteWorldSize(1024, 768);
 
 	//After create scene then create a sprite for user interface
 
@@ -313,7 +335,9 @@ void FyMain(int argc, char **argv)
 	enID = FyCreateAudio();
 
 	FnSprite sp;
+	FnSprite sp4;
 	FnSpriteText sp20;
+	FnSpriteText sp30;
 
 	spID20 = spritescene20.CreateObject(SPRITE);
 	sp20.Object(spID20);
@@ -332,6 +356,40 @@ void FyMain(int argc, char **argv)
 	sp20.SetSize(30, 30);
 	sp20.SetImage("arrow", 0, NULL, FALSE, NULL, 2, TRUE, FILTER_LINEAR);
 	sp20.SetPosition(410, 470, 0);
+
+	spID22 = spritescene20.CreateObject(SPRITE);
+	sp20.Object(spID22);
+	sp20.SetSize(360, 480);
+	sp20.SetImage("chou", 0, NULL, FALSE, NULL, 2, TRUE, FILTER_LINEAR);
+	sp20.SetPosition(664, 200, 0);
+
+	spID30 = spritescene30.CreateObject(SPRITE);
+	sp30.Object(spID30);
+	char releaseText[256], teammateaText[256], teammatebText[256];
+	sprintf(releaseText, "LEAVE");
+	sprintf(teammateaText, "LEAVE A");
+	sprintf(teammatebText, "LEAVE B");
+	
+	sp30.UseFont("Times New Roman", 30, FALSE, FALSE, FALSE);
+	sp30.Begin();
+	sp30.Write(0, 0, releaseText, 255, 255, 0);
+	sp30.Write(0, 30, teammateaText, 255, 255, 0);
+	sp30.Write(0, 60, teammatebText, 255, 255, 0);
+	sp30.End();
+	sp30.SetPosition(450, 370, 0);
+
+	spID31 = spritescene30.CreateObject(SPRITE);
+	sp30.Object(spID31);
+	sp30.SetSize(30, 30);
+	sp30.SetImage("chiou_head", 0, NULL, FALSE, NULL, 2, TRUE, FILTER_LINEAR);
+	sp30.SetPosition(410, 440, 0);
+
+
+	spID40 = spritescene40.CreateObject(SPRITE);
+	sp4.Object(spID40);
+	sp4.SetSize(768, 768);
+	sp4.SetImage("chiou_sideup", 0, NULL, FALSE, NULL, 2, TRUE, FILTER_LINEAR);
+	sp4.SetPosition(128, 0, 0);
 
 	// this is pause sprite
 	FnSprite sp1;
@@ -676,7 +734,7 @@ void FyMain(int argc, char **argv)
 	lgt.ID(scene.CreateObject(LIGHT));
 	lgt.Translate(70.0f, -70.0f, 70.0f, REPLACE);
 	lgt.SetColor(1.0f, 1.0f, 1.0f);
-	lgt.SetIntensity(1.0f);
+	lgt.SetIntensity(10.0f);
 
 	// create a text object for displaying messages on screen
 	textID = FyCreateText("Trebuchet MS", 18, FALSE, FALSE);
@@ -1200,11 +1258,36 @@ void playFX(int skip)
  ----------------------------------------------------------------*/
 void GameAI(int skip)
 {
-	if(!pause && !welcome) 
+	if(!pause && !welcome && !changeTeammate) 
 	{
 		// ?„å?callback
 		FyDefineHotKey(FY_UP, Movement, FALSE);      // Up for moving forward
 		FyDefineHotKey(FY_DOWN, Movement, FALSE);    // Down for moving back
+		float chPos[3] = {0.0f, 0.0f, 0.0f};
+
+		if (teammateID[2] != NONE)
+		{
+			switch(teammateID[2])
+			{
+				case NPCD:
+					npcd.SetPosition(chPos);
+					npcd.state = DIE;
+					break;
+				case NPCE:
+					npce.SetPosition(chPos);
+					npce.state = DIE;
+					break;
+				case NPCF:
+					npcf.SetPosition(chPos);
+					npcf.state = DIE;
+					break;
+				case NPCG:
+					npcg.SetPosition(chPos);
+					npcg.state = DIE;
+					break;
+			}
+			teammateID[2] = NONE;
+		}
 
 		FnCamera camera;
 		FnObject object, terrain;
@@ -2864,7 +2947,12 @@ void GameAI(int skip)
 					FnGameFXSystem dxS(dFXID);
 					BOOL4 beOK = dxS.Load("DonzuHurt", TRUE);
 					dxS.SetParentObjectForAll(baseID);
-				}	
+				}
+
+				if (npca.frame == 220)
+				{
+					winGame = true;
+				}
 				break;
 			default:
 				break;
@@ -4809,28 +4897,92 @@ void GameAI(int skip)
 	               {
 	                  npcd.target = NONE;
 	               }
+	               if (teammateID[0] == NPCD &&  (teammateID[1] == NPCD && !isFollow[1]))
+	 					{
+	                     npcd.target = nearestEnemy(NPCD, npcdpos);
+	                     if (npcd.target == NONE)
+	                     {
+	                        npcd.target = NPCD;
+	                     }
+	                  }
 	               break;
 	            case NPCE:
 	               if (npce.state == DIE)
 	               {
 	                  npcd.target = NONE;
 	               }
+	               if (teammateID[0] == NPCE &&  (teammateID[1] == NPCD && !isFollow[1]))
+	 					{
+	                     npcd.target = nearestEnemy(NPCD, npcdpos);
+	                     if (npcd.target == NONE)
+	                     {
+	                        npcd.target = NPCE;
+	                     }
+	                  }
 	               break;
 	            case NPCF:
 	               if (npcf.state == DIE)
 	               {
 	                  npcd.target = NONE;
 	               }
+	               if (teammateID[0] == NPCF &&  (teammateID[1] == NPCD && !isFollow[1]))
+	 					{
+	                     npcd.target = nearestEnemy(NPCD, npcdpos);
+	                     if (npcd.target == NONE)
+	                     {
+	                        npcd.target = NPCF;
+	                     }
+	                  }
 	               break;
 	            case NPCG:
 	               if (npcg.state == DIE)
 	               {
 	                  npcd.target = NONE;
 	               }
+	               if (teammateID[0] == NPCG &&  (teammateID[1] == NPCD && !isFollow[1]))
+	 					{
+	                     npcd.target = nearestEnemy(NPCD, npcdpos);
+	                     if (npcd.target == NONE)
+	                     {
+	                        npcd.target = NPCG;
+	                     }
+	                  }
 	               break;
 	            default:
 	               break;
 	         }
+	      }
+	      if (teammateID[1] == NPCD && npcd.target == ACTOR)
+	      {
+	      	switch(teammateID[0])
+	      	{
+	      		case NPCD:
+	      			if (npcd.target == ACTOR)
+	      			{
+	      				npcd.target = NPCD;
+	      			}
+	      			break;
+	      		case NPCE:
+	      			if (npce.target == ACTOR)
+	      			{
+	      				npcd.target = NPCE;
+	      			}
+	      			break;
+	      		case NPCF:
+	      			if (npcf.target == ACTOR)
+	      			{
+	      				npcd.target = NPCF;
+	      			}
+	      			break;
+	      		case NPCG:
+	      			if (npcg.target == ACTOR)
+	      			{
+	      				npcd.target = NPCG;
+	      			}
+	      			break;
+	      		default:
+	      			break;
+	      	}
 	      }
 	   }
 	   else
@@ -5049,6 +5201,17 @@ void GameAI(int skip)
 	               }
 	               break;
 	            case NPCD:
+	            if (npcd.isFriend  && npcd.isFriend)
+	               {
+	                  if (myDist(npcdpos, npcdpos) >= 100.0f)
+	                  {
+	                     npcd.state = RUN;
+	                     npcd.SetCurrentAction(NULL, 0, npcd.runID);
+	                     npcd.frame = 0;
+	                  }
+	               }
+	               else
+	               {
 	               if (myDist(npcdpos, npcdpos) <= 600.0f && myDist(npcdpos, npcdpos) >= 100.0f)
 	               {
 	                  npcd.state = RUN;
@@ -5078,8 +5241,20 @@ void GameAI(int skip)
 	                     }
 	                  }
 	               }
+	           }
 	               break;
 	            case NPCE:
+	               if (npcd.isFriend  && npce.isFriend)
+	               {
+	                  if (myDist(npcepos, npcdpos) >= 100.0f)
+	                  {
+	                     npcd.state = RUN;
+	                     npcd.SetCurrentAction(NULL, 0, npcd.runID);
+	                     npcd.frame = 0;
+	                  }
+	               }
+	               else
+	               {
 	               if (myDist(npcdpos, npcepos) <= 600.0f && myDist(npcdpos, npcepos) >= 100.0f)
 	               {
 	                  npcd.state = RUN;
@@ -5109,8 +5284,20 @@ void GameAI(int skip)
 	                     }
 	                  }
 	               }
+	           }
 	               break;
 	            case NPCF:
+	               if (npcd.isFriend  && npcf.isFriend)
+	               {
+	                  if (myDist(npcfpos, npcdpos) >= 100.0f)
+	                  {
+	                     npcd.state = RUN;
+	                     npcd.SetCurrentAction(NULL, 0, npcd.runID);
+	                     npcd.frame = 0;
+	                  }
+	               }
+	               else
+	               {
 	               if (myDist(npcdpos, npcfpos) <= 600.0f && myDist(npcdpos, npcfpos) >= 100.0f)
 	               {
 	                  npcd.state = RUN;
@@ -5140,8 +5327,20 @@ void GameAI(int skip)
 	                     }
 	                  }
 	               }
+	           }
 	               break;
 	            case NPCG:
+	               if (npcd.isFriend  && npcg.isFriend)
+	               {
+	                  if (myDist(npcgpos, npcdpos) >= 100.0f)
+	                  {
+	                     npcd.state = RUN;
+	                     npcd.SetCurrentAction(NULL, 0, npcd.runID);
+	                     npcd.frame = 0;
+	                  }
+	               }
+	               else
+	               {
 	               if (myDist(npcdpos, npcgpos) <= 600.0f && myDist(npcdpos, npcgpos) >= 100.0f)
 	               {
 	                  npcd.state = RUN;
@@ -5171,6 +5370,7 @@ void GameAI(int skip)
 	                     }
 	                  }
 	               }
+	           }
 	               break;
 	            default:
 	               break;
@@ -5723,7 +5923,30 @@ void GameAI(int skip)
 							npcd.frame = 0;
 							npcd.blood = npcd.fullBlood;
 						}
+						else
+						{
+							teammateID[2] = NPCD;
+							npcd.state = IDLE;
+							npcd.SetCurrentAction(NULL, 0, npcd.idleID);
+							npcd.frame = 0;
+							npcd.blood = npcd.fullBlood;
+
+							changeTeammate = true;
+						}
 						npcd.isFriend = true;
+					}
+				}
+				else
+				{
+					if (teammateID[0] == NPCD)
+					{
+						
+						teammateID[0] = NONE;
+					}
+					if (teammateID[1] == NPCD)
+					{
+						
+						teammateID[0] = NONE;
 					}
 				}
 				break;
@@ -5747,8 +5970,8 @@ void GameAI(int skip)
 			npce.SetCurrentAction(NULL, 0, npce.dieID);
 		}
 
-	   if (npce.state != DIE)
-	   {
+	   	if (npce.state != DIE)
+	   	{
 	      if (npce.isFriend)
 	      {
 	         if ((teammateID[0] == NPCE && isFollow[0]) || (teammateID[1] == NPCE && isFollow[1]))
@@ -5803,11 +6026,27 @@ void GameAI(int skip)
 	                  {
 	                     npce.target = NONE;
 	                  }
+	                  if (teammateID[0] == NPCD &&  (teammateID[1] == NPCE && !isFollow[1]))
+	 					{
+	                     npce.target = nearestEnemy(NPCE, npcepos);
+	                     if (npce.target == NONE)
+	                     {
+	                        npce.target = NPCD;
+	                     }
+	                  }
 	                  break;
 	               case NPCE:
 	                  if (npce.state == DIE)
 	                  {
 	                     npce.target = NONE;
+	                  }
+	                  if (teammateID[0] == NPCE &&  (teammateID[1] == NPCE && !isFollow[1]))
+	 					{
+	                     npce.target = nearestEnemy(NPCE, npcepos);
+	                     if (npce.target == NONE)
+	                     {
+	                        npce.target = NPCE;
+	                     }
 	                  }
 	                  break;
 	               case NPCF:
@@ -5815,17 +6054,65 @@ void GameAI(int skip)
 	                  {
 	                     npce.target = NONE;
 	                  }
+	                  if (teammateID[0] == NPCF &&  (teammateID[1] == NPCE && !isFollow[1]))
+	 					{
+	                     npce.target = nearestEnemy(NPCE, npcepos);
+	                     if (npce.target == NONE)
+	                     {
+	                        npce.target = NPCF;
+	                     }
+	                  }
 	                  break;
 	               case NPCG:
 	                  if (npcg.state == DIE)
 	                  {
 	                     npce.target = NONE;
 	                  }
+	                  if (teammateID[0] == NPCG &&  (teammateID[1] == NPCE && !isFollow[1]))
+	 					{
+	                     npce.target = nearestEnemy(NPCE, npcepos);
+	                     if (npce.target == NONE)
+	                     {
+	                        npce.target = NPCG;
+	                     }
+	                  }
 	                  break;
 	               default:
 	                  break;
 	            }
 	         }
+	         if (teammateID[1] == NPCE && npcd.target == ACTOR)
+	      {
+	      	switch(teammateID[0])
+	      	{
+	      		case NPCD:
+	      			if (npcd.target == ACTOR)
+	      			{
+	      				npce.target = NPCD;
+	      			}
+	      			break;
+	      		case NPCE:
+	      			if (npce.target == ACTOR)
+	      			{
+	      				npce.target = NPCE;
+	      			}
+	      			break;
+	      		case NPCF:
+	      			if (npcf.target == ACTOR)
+	      			{
+	      				npce.target = NPCF;
+	      			}
+	      			break;
+	      		case NPCG:
+	      			if (npcg.target == ACTOR)
+	      			{
+	      				npce.target = NPCG;
+	      			}
+	      			break;
+	      		default:
+	      			break;
+	      	}
+	      }
 	      }
 	      else
 	      {
@@ -6043,6 +6330,17 @@ void GameAI(int skip)
 	               }
 	               break;
 	            case NPCD:
+	               if (npce.isFriend  && npcd.isFriend)
+	               {
+	                  if (myDist(npcdpos, npcepos) >= 100.0f)
+	                  {
+	                     npce.state = RUN;
+	                     npce.SetCurrentAction(NULL, 0, npce.runID);
+	                     npce.frame = 0;
+	                  }
+	               }
+	               else
+	               {
 	               if (myDist(npcepos, npcdpos) <= 600.0f && myDist(npcepos, npcdpos) >= 100.0f)
 	               {
 	                  npce.state = RUN;
@@ -6072,8 +6370,20 @@ void GameAI(int skip)
 	                     }
 	                  }
 	               }
+	           }
 	               break;
 	            case NPCE:
+	               if (npce.isFriend  && npce.isFriend)
+	               {
+	                  if (myDist(npcepos, npcepos) >= 100.0f)
+	                  {
+	                     npce.state = RUN;
+	                     npce.SetCurrentAction(NULL, 0, npce.runID);
+	                     npce.frame = 0;
+	                  }
+	               }
+	               else
+	               {
 	               if (myDist(npcepos, npcepos) <= 600.0f && myDist(npcepos, npcepos) >= 100.0f)
 	               {
 	                  npce.state = RUN;
@@ -6103,8 +6413,20 @@ void GameAI(int skip)
 	                     }
 	                  }
 	               }
+	           }
 	               break;
 	            case NPCF:
+	               if (npce.isFriend  && npcf.isFriend)
+	               {
+	                  if (myDist(npcfpos, npcepos) >= 100.0f)
+	                  {
+	                     npce.state = RUN;
+	                     npce.SetCurrentAction(NULL, 0, npce.runID);
+	                     npce.frame = 0;
+	                  }
+	               }
+	               else
+	               {
 	               if (myDist(npcepos, npcfpos) <= 600.0f && myDist(npcepos, npcfpos) >= 100.0f)
 	               {
 	                  npce.state = RUN;
@@ -6134,8 +6456,20 @@ void GameAI(int skip)
 	                     }
 	                  }
 	               }
+	           }
 	               break;
 	            case NPCG:
+	               if (npce.isFriend  && npcg.isFriend)
+	               {
+	                  if (myDist(npcgpos, npcepos) >= 100.0f)
+	                  {
+	                     npce.state = RUN;
+	                     npce.SetCurrentAction(NULL, 0, npce.runID);
+	                     npce.frame = 0;
+	                  }
+	               }
+	               else
+	               {
 	               if (myDist(npcepos, npcgpos) <= 600.0f && myDist(npcepos, npcgpos) >= 100.0f)
 	               {
 	                  npce.state = RUN;
@@ -6165,6 +6499,7 @@ void GameAI(int skip)
 	                     }
 	                  }
 	               }
+	           }
 	               break;
 	            default:
 	               break;
@@ -6708,8 +7043,31 @@ void GameAI(int skip)
 							npce.SetCurrentAction(NULL, 0, npce.idleID);
 							npce.frame = 0;
 							npce.blood = npce.fullBlood;
-						}					
+						}
+						else
+						{
+							teammateID[2] = NPCE;
+							npce.state = IDLE;
+							npce.SetCurrentAction(NULL, 0, npce.idleID);
+							npce.frame = 0;
+							npce.blood = npce.fullBlood;
+
+							changeTeammate = true;
+						}				
 						npce.isFriend = true;
+					}
+				}
+				else
+				{
+					if (teammateID[0] == NPCE)
+					{
+						
+						teammateID[0] = NONE;
+					}
+					if (teammateID[1] == NPCE)
+					{
+						
+						teammateID[0] = NONE;
 					}
 				}
 				break;
@@ -6789,11 +7147,27 @@ void GameAI(int skip)
 	                  {
 	                     npcf.target = NONE;
 	                  }
+	                  if (teammateID[0] == NPCD &&  (teammateID[1] == NPCF && !isFollow[1]))
+	 					{
+	                     npcf.target = nearestEnemy(NPCF, npcfpos);
+	                     if (npcf.target == NONE)
+	                     {
+	                        npcf.target = NPCD;
+	                     }
+	                  }
 	                  break;
 	               case NPCE:
 	                  if (npce.state == DIE)
 	                  {
 	                     npcf.target = NONE;
+	                  }
+	                  if (teammateID[0] == NPCE &&  (teammateID[1] == NPCF && !isFollow[1]))
+	 					{
+	                     npcf.target = nearestEnemy(NPCF, npcfpos);
+	                     if (npcf.target == NONE)
+	                     {
+	                        npcf.target = NPCE;
+	                     }
 	                  }
 	                  break;
 	               case NPCF:
@@ -6801,17 +7175,65 @@ void GameAI(int skip)
 	                  {
 	                     npcf.target = NONE;
 	                  }
+	                  if (teammateID[0] == NPCF &&  (teammateID[1] == NPCF && !isFollow[1]))
+	 					{
+	                     npcf.target = nearestEnemy(NPCF, npcfpos);
+	                     if (npcf.target == NONE)
+	                     {
+	                        npcf.target = NPCF;
+	                     }
+	                  }
 	                  break;
 	               case NPCG:
 	                  if (npcg.state == DIE)
 	                  {
 	                     npcf.target = NONE;
 	                  }
+	                  if (teammateID[0] == NPCG &&  (teammateID[1] == NPCF && !isFollow[1]))
+	 					{
+	                     npcf.target = nearestEnemy(NPCF, npcfpos);
+	                     if (npcf.target == NONE)
+	                     {
+	                        npcf.target = NPCG;
+	                     }
+	                  }
 	                  break;
 	               default:
 	                  break;
 	            }
 	         }
+	         if (teammateID[1] == NPCF && npcd.target == ACTOR)
+	      {
+	      	switch(teammateID[0])
+	      	{
+	      		case NPCD:
+	      			if (npcd.target == ACTOR)
+	      			{
+	      				npcf.target = NPCD;
+	      			}
+	      			break;
+	      		case NPCE:
+	      			if (npce.target == ACTOR)
+	      			{
+	      				npcf.target = NPCE;
+	      			}
+	      			break;
+	      		case NPCF:
+	      			if (npcf.target == ACTOR)
+	      			{
+	      				npcf.target = NPCF;
+	      			}
+	      			break;
+	      		case NPCG:
+	      			if (npcg.target == ACTOR)
+	      			{
+	      				npcf.target = NPCG;
+	      			}
+	      			break;
+	      		default:
+	      			break;
+	      	}
+	      }
 	      }
 	      else
 	      {
@@ -7029,6 +7451,17 @@ void GameAI(int skip)
 	               }
 	               break;
 	            case NPCD:
+	               if (npcf.isFriend  && npcd.isFriend)
+	               {
+	                  if (myDist(npcdpos, npcfpos) >= 100.0f)
+	                  {
+	                     npcf.state = RUN;
+	                     npcf.SetCurrentAction(NULL, 0, npcf.runID);
+	                     npcf.frame = 0;
+	                  }
+	               }
+	               else
+	               {
 	               if (myDist(npcfpos, npcdpos) <= 600.0f && myDist(npcfpos, npcdpos) >= 100.0f)
 	               {
 	                  npcf.state = RUN;
@@ -7058,8 +7491,20 @@ void GameAI(int skip)
 	                     }
 	                  }
 	               }
+	           }
 	               break;
 	            case NPCE:
+	               if (npcf.isFriend  && npce.isFriend)
+	               {
+	                  if (myDist(npcepos, npcfpos) >= 100.0f)
+	                  {
+	                     npcf.state = RUN;
+	                     npcf.SetCurrentAction(NULL, 0, npcf.runID);
+	                     npcf.frame = 0;
+	                  }
+	               }
+	               else
+	               {
 	               if (myDist(npcfpos, npcepos) <= 600.0f && myDist(npcfpos, npcepos) >= 100.0f)
 	               {
 	                  npcf.state = RUN;
@@ -7089,8 +7534,20 @@ void GameAI(int skip)
 	                     }
 	                  }
 	               }
+	           }
 	               break;
 	            case NPCF:
+	               if (npcf.isFriend  && npcf.isFriend)
+	               {
+	                  if (myDist(npcfpos, npcfpos) >= 100.0f)
+	                  {
+	                     npcf.state = RUN;
+	                     npcf.SetCurrentAction(NULL, 0, npcf.runID);
+	                     npcf.frame = 0;
+	                  }
+	               }
+	               else
+	               {
 	               if (myDist(npcfpos, npcfpos) <= 600.0f && myDist(npcfpos, npcfpos) >= 100.0f)
 	               {
 	                  npcf.state = RUN;
@@ -7120,8 +7577,20 @@ void GameAI(int skip)
 	                     }
 	                  }
 	               }
+	           }
 	               break;
 	            case NPCG:
+	               if (npcf.isFriend  && npcg.isFriend)
+	               {
+	                  if (myDist(npcgpos, npcfpos) >= 100.0f)
+	                  {
+	                     npcf.state = RUN;
+	                     npcf.SetCurrentAction(NULL, 0, npcf.runID);
+	                     npcf.frame = 0;
+	                  }
+	               }
+	               else
+	               {
 	               if (myDist(npcfpos, npcgpos) <= 600.0f && myDist(npcfpos, npcgpos) >= 100.0f)
 	               {
 	                  npcf.state = RUN;
@@ -7151,6 +7620,7 @@ void GameAI(int skip)
 	                     }
 	                  }
 	               }
+	           }
 	               break;
 	            default:
 	               break;
@@ -7699,7 +8169,30 @@ void GameAI(int skip)
 							npcf.blood = npcf.fullBlood;
 							teammateID[1] = NPCF;
 						}
+						else
+						{
+							teammateID[2] = NPCF;
+							npcf.state = IDLE;
+							npcf.SetCurrentAction(NULL, 0, npcf.idleID);
+							npcf.frame = 0;
+							npcf.blood = npcf.fullBlood;
+
+							changeTeammate = true;
+						}	
 						npcf.isFriend = true;
+					}
+				}
+				else
+				{
+					if (teammateID[0] == NPCF)
+					{
+						
+						teammateID[0] = NONE;
+					}
+					if (teammateID[1] == NPCF)
+					{
+						
+						teammateID[0] = NONE;
 					}
 				}
 				break;
@@ -7779,11 +8272,27 @@ void GameAI(int skip)
 	                  {
 	                     npcg.target = NONE;
 	                  }
+	                  if (teammateID[0] == NPCD &&  (teammateID[1] == NPCG && !isFollow[1]))
+	 					{
+	                     npcg.target = nearestEnemy(NPCG, npcgpos);
+	                     if (npcg.target == NONE)
+	                     {
+	                        npcg.target = NPCD;
+	                     }
+	                  }
 	                  break;
 	               case NPCE:
 	                  if (npce.state == DIE)
 	                  {
 	                     npcg.target = NONE;
+	                  }
+	                  if (teammateID[0] == NPCE &&  (teammateID[1] == NPCG && !isFollow[1]))
+	 					{
+	                     npcg.target = nearestEnemy(NPCG, npcgpos);
+	                     if (npcg.target == NONE)
+	                     {
+	                        npcg.target = NPCE;
+	                     }
 	                  }
 	                  break;
 	               case NPCF:
@@ -7791,17 +8300,65 @@ void GameAI(int skip)
 	                  {
 	                     npcg.target = NONE;
 	                  }
+	                  if (teammateID[0] == NPCF &&  (teammateID[1] == NPCG && !isFollow[1]))
+	 					{
+	                     npcg.target = nearestEnemy(NPCG, npcgpos);
+	                     if (npcg.target == NONE)
+	                     {
+	                        npcg.target = NPCF;
+	                     }
+	                  }
 	                  break;
 	               case NPCG:
 	                  if (npcg.state == DIE)
 	                  {
 	                     npcg.target = NONE;
 	                  }
+	                  if (teammateID[0] == NPCG &&  (teammateID[1] == NPCG && !isFollow[1]))
+	 					{
+	                     npcg.target = nearestEnemy(NPCG, npcgpos);
+	                     if (npcg.target == NONE)
+	                     {
+	                        npcg.target = NPCG;
+	                     }
+	                  }
 	                  break;
 	               default:
 	                  break;
 	            }
 	         }
+	         if (teammateID[1] == NPCG && npcd.target == ACTOR)
+	      {
+	      	switch(teammateID[0])
+	      	{
+	      		case NPCD:
+	      			if (npcd.target == ACTOR)
+	      			{
+	      				npcg.target = NPCD;
+	      			}
+	      			break;
+	      		case NPCE:
+	      			if (npce.target == ACTOR)
+	      			{
+	      				npcg.target = NPCE;
+	      			}
+	      			break;
+	      		case NPCF:
+	      			if (npcf.target == ACTOR)
+	      			{
+	      				npcg.target = NPCF;
+	      			}
+	      			break;
+	      		case NPCG:
+	      			if (npcg.target == ACTOR)
+	      			{
+	      				npcg.target = NPCG;
+	      			}
+	      			break;
+	      		default:
+	      			break;
+	      	}
+	      }
 	      }
 	      else
 	      {
@@ -8019,6 +8576,17 @@ void GameAI(int skip)
 	               }
 	               break;
 	            case NPCD:
+	               if (npcg.isFriend  && npcd.isFriend)
+	               {
+	                  if (myDist(npcdpos, npcgpos) >= 100.0f)
+	                  {
+	                     npcg.state = RUN;
+	                     npcg.SetCurrentAction(NULL, 0, npcg.runID);
+	                     npcg.frame = 0;
+	                  }
+	               }
+	               else
+	               {
 	               if (myDist(npcgpos, npcdpos) <= 600.0f && myDist(npcgpos, npcdpos) >= 100.0f)
 	               {
 	                  npcg.state = RUN;
@@ -8048,8 +8616,20 @@ void GameAI(int skip)
 	                     }
 	                  }
 	               }
+	           }
 	               break;
 	            case NPCE:
+	               if (npcg.isFriend  && npce.isFriend)
+	               {
+	                  if (myDist(npcepos, npcgpos) >= 100.0f)
+	                  {
+	                     npcg.state = RUN;
+	                     npcg.SetCurrentAction(NULL, 0, npcg.runID);
+	                     npcg.frame = 0;
+	                  }
+	               }
+	               else
+	               {
 	               if (myDist(npcgpos, npcepos) <= 600.0f && myDist(npcgpos, npcepos) >= 100.0f)
 	               {
 	                  npcg.state = RUN;
@@ -8079,8 +8659,20 @@ void GameAI(int skip)
 	                     }
 	                  }
 	               }
+	           }
 	               break;
 	            case NPCF:
+	               if (npcg.isFriend  && npcf.isFriend)
+	               {
+	                  if (myDist(npcfpos, npcgpos) >= 100.0f)
+	                  {
+	                     npcg.state = RUN;
+	                     npcg.SetCurrentAction(NULL, 0, npcg.runID);
+	                     npcg.frame = 0;
+	                  }
+	               }
+	               else
+	               {
 	               if (myDist(npcgpos, npcfpos) <= 600.0f && myDist(npcgpos, npcfpos) >= 100.0f)
 	               {
 	                  npcg.state = RUN;
@@ -8110,8 +8702,20 @@ void GameAI(int skip)
 	                     }
 	                  }
 	               }
+	           }
 	               break;
 	            case NPCG:
+	               if (npcg.isFriend  && npcg.isFriend)
+	               {
+	                  if (myDist(npcgpos, npcgpos) >= 100.0f)
+	                  {
+	                     npcg.state = RUN;
+	                     npcg.SetCurrentAction(NULL, 0, npcg.runID);
+	                     npcg.frame = 0;
+	                  }
+	               }
+	               else
+	               {
 	               if (myDist(npcgpos, npcgpos) <= 600.0f && myDist(npcgpos, npcgpos) >= 100.0f)
 	               {
 	                  npcg.state = RUN;
@@ -8141,6 +8745,7 @@ void GameAI(int skip)
 	                     }
 	                  }
 	               }
+	           }
 	               break;
 	            default:
 	               break;
@@ -8689,7 +9294,30 @@ void GameAI(int skip)
 							npcg.frame = 0;
 							npcg.blood = npcg.fullBlood;
 						}
+						else
+						{
+							teammateID[2] = NPCG;
+							npcg.state = IDLE;
+							npcg.SetCurrentAction(NULL, 0, npcg.idleID);
+							npcg.frame = 0;
+							npcg.blood = npcg.fullBlood;
+
+							changeTeammate = true;
+						}
 						npcg.isFriend = true;
+					}
+				}
+				else
+				{
+					if (teammateID[0] == NPCG)
+					{
+						
+						teammateID[0] = NONE;
+					}
+					if (teammateID[1] == NPCG)
+					{
+						
+						teammateID[0] = NONE;
 					}
 				}
 				break;
@@ -8775,6 +9403,12 @@ void GameAI(int skip)
 		FyDefineHotKey(FY_RETURN, PauseAction, FALSE);
 
 	}
+	if (changeTeammate)
+	{
+		FyDefineHotKey(FY_UP, Movement, FALSE);
+		FyDefineHotKey(FY_DOWN, Movement, FALSE);
+		FyDefineHotKey(FY_RETURN, ChangeAction, FALSE);
+	}
 }
 
 void RenderIt(int skip)
@@ -8790,10 +9424,18 @@ void RenderIt(int skip)
    		vp.RenderSprites(sID20, TRUE, TRUE);
    	}
 
+   	if(changeTeammate){
+   		vp.RenderSprites(sID30, TRUE, TRUE);
+   	}
+
    	if(pause){
    		vp.RenderSprites(sID2, TRUE, TRUE);
    	}
-  
+  	
+  	if (winGame)
+  	{
+  		vp.RenderSprites(sID40, TRUE, TRUE);
+  	}
 
 
 	// get camera's data
@@ -8836,34 +9478,34 @@ void RenderIt(int skip)
 	text.Begin(vID);
 	text.Write(string, 20, 20, 255, 0, 0);
 
-	char posS[256], npcaposS[256], npcbposS[256], distS[256];
-	char cposS[256], cfDirS[256], cuDirS[256];
-	char actorBloodS[256], npcaBloodS[256], npcbBloodS[256];
-	char frameS[256];
+	// char posS[256], npcaposS[256], npcbposS[256], distS[256];
+	// char cposS[256], cfDirS[256], cuDirS[256];
+	// char actorBloodS[256], npcaBloodS[256], npcbBloodS[256];
+	// char frameS[256];
 
-	sprintf(cposS, "cpos: %8.3f %8.3f %8.3f", cpos[0], cpos[1], cpos[2]);
-	sprintf(cfDirS, "cfacing: %8.3f %8.3f %8.3f", cfDir[0], cfDir[1], cfDir[2]);
-	sprintf(cuDirS, "cup: %8.3f %8.3f %8.3f", cuDir[0], cuDir[1], cuDir[2]);
-	sprintf(posS, "pos: %8.3f %8.3f %8.3f", pos[0], pos[1], pos[2]);
-	sprintf(npcaposS, "npcapos: %8.3f %8.3f %8.3f", npcapos[0], npcapos[1], npcapos[2]);
-	sprintf(npcbposS, "npcbpos: %8.3f %8.3f %8.3f", npcbpos[0], npcbpos[1], npcbpos[2]);
-	sprintf(distS, "dist: %8.3f", myDist(cpos, pos));
-	sprintf(actorBloodS, "Actor HP: %d / %d", actor.blood, actor.fullBlood);
-	sprintf(npcaBloodS, "Npc A HP: %d / %d", npca.blood, npca.fullBlood);
-	sprintf(npcbBloodS, "Npc B HP: %d / %d", npcb.blood, npcb.fullBlood);
-	sprintf(frameS, "actor frame: %d", actor.frame);
+	// sprintf(cposS, "cpos: %8.3f %8.3f %8.3f", cpos[0], cpos[1], cpos[2]);
+	// sprintf(cfDirS, "cfacing: %8.3f %8.3f %8.3f", cfDir[0], cfDir[1], cfDir[2]);
+	// sprintf(cuDirS, "cup: %8.3f %8.3f %8.3f", cuDir[0], cuDir[1], cuDir[2]);
+	// sprintf(posS, "pos: %8.3f %8.3f %8.3f", pos[0], pos[1], pos[2]);
+	// sprintf(npcaposS, "npcapos: %8.3f %8.3f %8.3f", npcapos[0], npcapos[1], npcapos[2]);
+	// sprintf(npcbposS, "npcbpos: %8.3f %8.3f %8.3f", npcbpos[0], npcbpos[1], npcbpos[2]);
+	// sprintf(distS, "dist: %8.3f", myDist(cpos, pos));
+	// sprintf(actorBloodS, "Actor HP: %d / %d", actor.blood, actor.fullBlood);
+	// sprintf(npcaBloodS, "Npc A HP: %d / %d", npca.blood, npca.fullBlood);
+	// sprintf(npcbBloodS, "Npc B HP: %d / %d", npcb.blood, npcb.fullBlood);
+	// sprintf(frameS, "actor frame: %d", actor.frame);
 
-	text.Write(cposS, 20, 35, 255, 255, 0);
-	text.Write(cfDirS, 20, 50, 255, 255, 0);
-	text.Write(cuDirS, 20, 65, 255, 255, 0);
-	text.Write(distS, 20, 95, 255, 255, 0);
-	text.Write(posS, 20, 110, 255, 255, 0);
-	text.Write(npcaposS, 20, 125, 255, 255, 0);
-	text.Write(npcbposS, 20, 140, 255, 255, 0);
-	text.Write(actorBloodS, 20, 155, 255, 255, 0);
-	text.Write(npcaBloodS, 20, 170, 255, 255, 0);
-	text.Write(npcbBloodS, 20, 185, 255, 255, 0);
-	text.Write(frameS, 20, 200, 255, 255, 0);
+	// text.Write(cposS, 20, 35, 255, 255, 0);
+	// text.Write(cfDirS, 20, 50, 255, 255, 0);
+	// text.Write(cuDirS, 20, 65, 255, 255, 0);
+	// text.Write(distS, 20, 95, 255, 255, 0);
+	// text.Write(posS, 20, 110, 255, 255, 0);
+	// text.Write(npcaposS, 20, 125, 255, 255, 0);
+	// text.Write(npcbposS, 20, 140, 255, 255, 0);
+	// text.Write(actorBloodS, 20, 155, 255, 255, 0);
+	// text.Write(npcaBloodS, 20, 170, 255, 255, 0);
+	// text.Write(npcbBloodS, 20, 185, 255, 255, 0);
+	// text.Write(frameS, 20, 200, 255, 255, 0);
 
 	text.End();
 
@@ -8940,6 +9582,34 @@ void Movement(BYTE code, BOOL4 value)
 				else{
 					pausePointer ++;
 					sp.SetPosition(pausePos[pausePointer][0], pausePos[pausePointer][1],0);
+				}
+			}
+		}
+		else if (changeTeammate)
+		{
+			if (code == FY_UP)
+			{
+				FnSprite sp;
+				sp.Object(spID31);
+				if(changeMenu == 1){
+
+				}
+				else{
+					changeMenu--;
+					sp.SetPosition(410, changePos[changeMenu-1],0);
+				}
+				
+			}
+			else if (code == FY_DOWN)
+			{
+				FnSprite sp;
+				sp.Object(spID31);
+				if(changeMenu == 3){
+
+				}
+				else{
+					changeMenu++;
+					sp.SetPosition(410, changePos[changeMenu-1],0);
 				}
 			}
 		}
@@ -9319,5 +9989,29 @@ void enterMenu(BYTE code, BOOL4 value)
     			FyQuitFlyWin32();
     		}
 		}
+	}
+}
+
+void ChangeAction(BYTE code, BOOL4 value)
+{
+	int tempID;
+	if (value)
+	{
+		switch(changeMenu)
+		{
+			case 1:
+				break;
+			case 2:
+				tempID = teammateID[0];
+				teammateID[0] = teammateID[2];
+				teammateID[2] = tempID;
+				break;
+			case 3:
+				tempID = teammateID[1];
+				teammateID[1] = teammateID[2];
+				teammateID[2] = tempID;
+				break;
+		}
+		changeTeammate = false;
 	}
 }
