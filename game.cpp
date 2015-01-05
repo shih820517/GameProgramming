@@ -9108,7 +9108,8 @@ void PauseAction(BYTE code, BOOL4 value){
 						pause = false;
 						break;
 					case 2:
-
+						pause = false;
+						welcome = true;
 						break;
 					case 3:
 						//toggle the enmusic
